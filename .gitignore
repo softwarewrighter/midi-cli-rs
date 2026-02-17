@@ -2,6 +2,7 @@
 
 # SoundFont files (large, download separately)
 /soundfonts/*.sf2
+*.sf2
 
 # Generated preview files (regenerate with scripts/demo-generate.sh)
 /preview/*.wav
@@ -11,3 +12,21 @@
 *.mid
 *.wav
 !preview/index.html
+
+# Binary and build artifacts
+*.exe
+*.dll
+*.so
+*.dylib
+*.a
+*.lib
+*.o
+*.obj
+
+# Editor/IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
