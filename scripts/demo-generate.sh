@@ -226,6 +226,16 @@ echo "18. Jazz preset - Eb uptempo (6 sec)"
     --seed 456 \
     --output "$PREVIEW_DIR/18-preset-jazz-uptempo.wav"
 
+# ============================================
+# Example 19: Walking bass only (Bb)
+# ============================================
+echo "19. Walking bass - Bb (8 sec)"
+"$CLI" generate \
+    --notes "Bb2:0.9:85@0,D3:0.9:80@1,F3:0.9:85@2,A2:0.9:80@3,Bb2:0.9:85@4,G2:0.9:80@5,F2:0.9:85@6,E2:0.9:80@7,Eb2:0.9:85@8,G2:0.9:80@9,Bb2:0.9:85@10,D3:0.9:80@11,Eb3:0.9:85@12,D3:0.9:80@13,C3:0.9:85@14,Bb2:0.9:90@15" \
+    --instrument bass \
+    --tempo 120 \
+    --output "$PREVIEW_DIR/19-walking-bass.wav"
+
 echo ""
 echo "Generated samples in $PREVIEW_DIR:"
 ls -la "$PREVIEW_DIR"/*.wav 2>/dev/null || echo "No WAV files found"
