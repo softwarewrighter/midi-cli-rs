@@ -167,6 +167,10 @@ enum Commands {
         /// SoundFont file for WAV rendering (auto-detected if not specified)
         #[arg(long)]
         soundfont: Option<PathBuf>,
+
+        /// Show detailed generation info (layers, notes, instruments)
+        #[arg(short = 'v', long)]
+        verbose: bool,
     },
 
     /// Render existing MIDI file to WAV audio
@@ -283,6 +287,7 @@ fn run(command: Commands) -> Result<(), Box<dyn std::error::Error>> {
             seed,
             output,
             soundfont,
+            verbose,
         } => {
             // Parse mood
             let mood_enum = Mood::parse(&mood).ok_or_else(|| {
@@ -321,6 +326,32 @@ fn run(command: Commands) -> Result<(), Box<dyn std::error::Error>> {
 
             if sequences.is_empty() {
                 return Err("No sequences generated".into());
+            }
+
+            // Verbose output
+            if verbose {
+                eprintln!("--- Preset Generation Details ---");
+                eprintln!("Mood: {:?}", mood_enum);
+                eprintln!("Key: {:?} (root MIDI note: {})", key_enum, key_enum.root());
+                eprintln!("Duration: {:.1}s ({:.1} beats at {} BPM)", duration, duration * tempo as f64 / 60.0, tempo);
+                eprintln!("Intensity: {}/100", intensity);
+                eprintln!("Seed: {}{}", actual_seed, if seed <= 0 { " (random)" } else { "" });
+                eprintln!("Layers: {}", sequences.len());
+                for (i, seq) in sequences.iter().enumerate() {
+                    let instrument_name = midi_cli_rs::INSTRUMENT_MAP
+                        .iter()
+                        .find(|(_, num)| *num == seq.instrument)
+                        .map(|(name, _)| *name)
+                        .unwrap_or("unknown");
+                    eprintln!(
+                        "  Layer {}: {} notes, instrument {} ({})",
+                        i + 1,
+                        seq.notes.len(),
+                        seq.instrument,
+                        instrument_name
+                    );
+                }
+                eprintln!("---------------------------------");
             }
 
             // Determine output format from extension
