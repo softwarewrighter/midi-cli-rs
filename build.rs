@@ -64,4 +64,7 @@ pub const BUILD_TIMESTAMP: i64 = {timestamp};
     // Rerun if these files change
     println!("cargo:rerun-if-changed=COPYRIGHT");
     println!("cargo:rerun-if-changed=Cargo.toml");
+    // Rerun when git commit changes (for accurate commit SHA in version output)
+    println!("cargo:rerun-if-changed=.git/HEAD");
+    println!("cargo:rerun-if-changed=.git/refs/heads");
 }
