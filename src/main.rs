@@ -59,7 +59,7 @@ AI CODING AGENT INSTRUCTIONS:
 
   MOOD PRESETS: suspense, eerie, upbeat, calm, ambient, jazz
     Each generates multi-layered compositions with appropriate instruments.
-    Use --seed for reproducible output across runs.
+    Default seed=1 for reproducible output. Use --seed 0 for random variation.
 
   OUTPUT FORMATS:
     - .mid: MIDI file only (fast, no dependencies)
@@ -126,11 +126,15 @@ enum Commands {
     /// Generate MIDI/audio using a mood preset (recommended for quick results)
     #[command(long_about = "Generate MIDI/audio using a mood preset.\n\n\
         EXAMPLES:\n  \
-        midi-cli-rs preset --mood suspense --duration 5 -o intro.wav\n  \
-        midi-cli-rs preset -m jazz -d 10 --key Bb --seed 42 -o nightclub.wav\n\n\
+        midi-cli-rs preset -m jazz -d 8 -o intro.wav           # Uses default seed=1\n  \
+        midi-cli-rs preset -m jazz -d 8 --seed 0 -o intro.wav  # Random seed each time\n  \
+        midi-cli-rs preset -m jazz -d 8 --seed 42 -o intro.wav # Specific seed\n\n\
         MOODS: suspense, eerie, upbeat, calm, ambient, jazz\n\
         Use 'moods' command to see descriptions of each preset.\n\n\
-        TIP: Use --seed for reproducible output across multiple runs.")]
+        SEED BEHAVIOR:\n  \
+        --seed 1 (default): Same output every time (reproducible)\n  \
+        --seed 0: Random seed (shown in output for replication)\n  \
+        --seed N: Use specific seed N for exact reproduction")]
     Preset {
         /// Mood preset: suspense, eerie, upbeat, calm, ambient, jazz
         #[arg(short, long)]
@@ -152,9 +156,9 @@ enum Commands {
         #[arg(short, long, default_value = "90")]
         tempo: u16,
 
-        /// Random seed for reproducible output (auto-generated if omitted)
-        #[arg(short, long)]
-        seed: Option<u64>,
+        /// Random seed for reproducible output (default: 1, use 0 for random)
+        #[arg(short, long, default_value = "1")]
+        seed: i64,
 
         /// Output file path (.mid for MIDI only, .wav for audio)
         #[arg(short, long)]
@@ -293,17 +297,22 @@ fn run(command: Commands) -> Result<(), Box<dyn std::error::Error>> {
                 mood_enum.default_key()
             };
 
+            // Handle seed: 0 or negative = random, positive = use that value
+            let actual_seed = if seed <= 0 {
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_secs())
+                    .unwrap_or(42)
+            } else {
+                seed as u64
+            };
+
             // Create config
             let config = PresetConfig {
                 duration_secs: duration,
                 key: key_enum,
                 intensity: intensity.min(100),
-                seed: seed.unwrap_or_else(|| {
-                    std::time::SystemTime::now()
-                        .duration_since(std::time::UNIX_EPOCH)
-                        .map(|d| d.as_secs())
-                        .unwrap_or(42)
-                }),
+                seed: actual_seed,
                 tempo,
             };
 

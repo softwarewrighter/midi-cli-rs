@@ -43,15 +43,23 @@ midi-cli-rs preset \
     --output intro.wav     # .wav or .mid
 ```
 
-### Reproducibility
-
-Always use `--seed` when you need consistent output:
+### Seed Behavior
 
 ```bash
-# These produce identical results
-midi-cli-rs preset -m upbeat -d 5 --seed 12345 -o take1.wav
-midi-cli-rs preset -m upbeat -d 5 --seed 12345 -o take2.wav
+# Default (seed=1): Same output every time - reproducible
+midi-cli-rs preset -m jazz -d 8 -o intro.wav
+midi-cli-rs preset -m jazz -d 8 -o intro2.wav  # Identical to above
+
+# Random seed (seed=0): Different output each time
+midi-cli-rs preset -m jazz -d 8 --seed 0 -o take1.wav
+# Output shows: Generated Jazz preset (seed: 1739587234, key: F)
+#                                       ^^^ save this to replicate
+
+# Specific seed: Exact reproduction
+midi-cli-rs preset -m jazz -d 8 --seed 1739587234 -o take1-copy.wav
 ```
+
+Use `--seed 0` when you want variety across similar videos, then note the seed shown in output to replicate a good result.
 
 ## Manual Note Generation
 
