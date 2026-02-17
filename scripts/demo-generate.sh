@@ -227,14 +227,24 @@ echo "18. Jazz preset - Eb uptempo (6 sec)"
     --output "$PREVIEW_DIR/18-preset-jazz-uptempo.wav"
 
 # ============================================
-# Example 19: Walking bass only (Bb) - deep, plucked
+# Example 19: Walking bass - contrabass (upright)
 # ============================================
-echo "19. Walking bass - Bb deep (8 sec)"
+echo "19. Walking bass - contrabass (8 sec)"
 "$CLI" generate \
     --notes "Bb1:0.7:95@0,D2:0.7:90@1,F2:0.7:95@2,A1:0.7:90@3,Bb1:0.7:95@4,G1:0.7:90@5,F1:0.7:95@6,E1:0.7:90@7,Eb1:0.7:95@8,G1:0.7:90@9,Bb1:0.7:95@10,D2:0.7:90@11,Eb2:0.7:95@12,D2:0.7:90@13,C2:0.7:95@14,Bb1:0.7:100@15" \
-    --instrument bass \
+    --instrument contrabass \
     --tempo 120 \
     --output "$PREVIEW_DIR/19-walking-bass.wav"
+
+# ============================================
+# Example 20: Walking bass - pizzicato strings
+# ============================================
+echo "20. Walking bass - pizzicato (8 sec)"
+"$CLI" generate \
+    --notes "Bb1:0.5:100@0,D2:0.5:95@1,F2:0.5:100@2,A1:0.5:95@3,Bb1:0.5:100@4,G1:0.5:95@5,F1:0.5:100@6,E1:0.5:95@7,Eb1:0.5:100@8,G1:0.5:95@9,Bb1:0.5:100@10,D2:0.5:95@11,Eb2:0.5:100@12,D2:0.5:95@13,C2:0.5:100@14,Bb1:0.5:105@15" \
+    -i 45 \
+    --tempo 120 \
+    --output "$PREVIEW_DIR/20-walking-bass-pizz.wav"
 
 echo ""
 echo "Generated samples in $PREVIEW_DIR:"
