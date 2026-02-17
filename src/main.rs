@@ -554,21 +554,22 @@ fn find_fluidsynth() -> Result<PathBuf, Box<dyn std::error::Error>> {
 
 /// Find a SoundFont file
 fn find_soundfont() -> Result<PathBuf, Box<dyn std::error::Error>> {
+    // Prioritize MIT-licensed soundfonts for clear commercial use rights
     let paths = [
-        // Project local (preferred)
-        "./soundfonts/TimGM6mb.sf2",
-        "./soundfonts/default.sf2",
+        // Project local (preferred) - MIT licensed
         "./soundfonts/FluidR3_GM.sf2",
-        // macOS Homebrew
-        "/opt/homebrew/share/soundfonts/default.sf2",
+        "./soundfonts/GeneralUser_GS.sf2",
+        "./soundfonts/MuseScore_General.sf2",
+        "./soundfonts/default.sf2",
+        // macOS Homebrew - FluidR3_GM is MIT licensed
         "/opt/homebrew/share/sounds/sf2/FluidR3_GM.sf2",
+        "/opt/homebrew/share/soundfonts/default.sf2",
         "/usr/local/share/soundfonts/default.sf2",
-        // Linux
+        // Linux - FluidR3_GM is MIT licensed
         "/usr/share/sounds/sf2/FluidR3_GM.sf2",
         "/usr/share/soundfonts/FluidR3_GM.sf2",
         "/usr/share/soundfonts/default.sf2",
         "/usr/share/soundfonts/freepats-general-midi.sf2",
-        "/usr/share/soundfonts/TimGM6mb.sf2",
     ];
 
     for path in paths {
