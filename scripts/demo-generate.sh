@@ -189,16 +189,42 @@ echo "15. Ambient preset (7 sec)"
     --output "$PREVIEW_DIR/15-preset-ambient.wav"
 
 # ============================================
-# Example 16: Jazz preset
+# Example 16: Jazz preset (Bb - classic jazz key)
 # ============================================
-echo "16. Jazz preset (8 sec)"
+echo "16. Jazz preset - Bb (8 sec)"
 "$CLI" preset \
     --mood jazz \
     --duration 8 \
     --key Bb \
     --intensity 70 \
     --seed 42 \
-    --output "$PREVIEW_DIR/16-preset-jazz.wav"
+    --output "$PREVIEW_DIR/16-preset-jazz-bb.wav"
+
+# ============================================
+# Example 17: Jazz preset (F - mellow)
+# ============================================
+echo "17. Jazz preset - F mellow (8 sec)"
+"$CLI" preset \
+    --mood jazz \
+    --duration 8 \
+    --key F \
+    --intensity 50 \
+    --tempo 80 \
+    --seed 123 \
+    --output "$PREVIEW_DIR/17-preset-jazz-mellow.wav"
+
+# ============================================
+# Example 18: Jazz preset (Eb - uptempo)
+# ============================================
+echo "18. Jazz preset - Eb uptempo (6 sec)"
+"$CLI" preset \
+    --mood jazz \
+    --duration 6 \
+    --key Eb \
+    --intensity 85 \
+    --tempo 140 \
+    --seed 456 \
+    --output "$PREVIEW_DIR/18-preset-jazz-uptempo.wav"
 
 echo ""
 echo "Generated samples in $PREVIEW_DIR:"
