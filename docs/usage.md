@@ -34,12 +34,13 @@ Use presets for instant, professionally-designed compositions:
 
 ```bash
 midi-cli-rs preset \
-    --mood suspense \      # Required: suspense|eerie|upbeat|calm|ambient
+    --mood suspense \      # Required: suspense|eerie|upbeat|calm|ambient|jazz
     --duration 5 \         # Seconds (default: 5, typical: 3-15)
-    --key Am \             # Optional: C|Cm|D|Dm|E|Em|F|Fm|G|Gm|A|Am|B|Bm
+    --key Am \             # Optional: C|Cm|D|Dm|Eb|E|Em|F|Fm|G|Gm|A|Am|Bb|B|Bm
     --intensity 70 \       # 0-100: affects layering (default: 50)
     --tempo 90 \           # BPM (default: 90)
-    --seed 42 \            # For reproducible output
+    --seed 1 \             # Default: 1 (reproducible), use 0 for random
+    --verbose \            # Show generation details
     --output intro.wav     # .wav or .mid
 ```
 
@@ -60,6 +61,32 @@ midi-cli-rs preset -m jazz -d 8 --seed 1739587234 -o take1-copy.wav
 ```
 
 Use `--seed 0` when you want variety across similar videos, then note the seed shown in output to replicate a good result.
+
+### Verbose Mode
+
+Use `-v/--verbose` to see detailed generation info:
+
+```bash
+midi-cli-rs preset -m jazz -d 5 --seed 0 -v -o test.mid
+```
+
+Output:
+```
+--- Preset Generation Details ---
+Mood: Jazz
+Key: F (root MIDI note: 65)
+Duration: 5.0s (7.5 beats at 90 BPM)
+Intensity: 50/100
+Seed: 1771297485 (random)
+Layers: 4
+  Layer 1: 8 notes, instrument 32 (acoustic bass)
+  Layer 2: 6 notes, instrument 4 (electric_piano)
+  Layer 3: 15 notes, instrument 14 (tubular_bells)
+  Layer 4: 4 notes, instrument 115 (woodblock)
+---------------------------------
+```
+
+Useful for debugging, understanding layer composition, and tuning intensity levels.
 
 ## Manual Note Generation
 

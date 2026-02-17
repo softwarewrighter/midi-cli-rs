@@ -75,7 +75,8 @@ midi-cli-rs preset \
     --mood suspense \
     --duration 5 \
     --intensity 70 \
-    --seed 42 \
+    --seed 0 \            # 0 = random, 1 = default reproducible
+    --verbose \           # Show layers and note counts
     --output intro.wav
 ```
 
