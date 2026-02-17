@@ -92,6 +92,9 @@
         <h2>Quick Start</h2>
         <p>Generate audio samples with simple CLI commands:</p>
         <div class="usage-examples">
+# Use a mood preset (easiest)
+midi-cli-rs preset --mood suspense --duration 5 -o intro.wav
+
 # Simple chord
 midi-cli-rs generate --notes "C4:1:80,E4:1:80,G4:1:80" -i piano -o chord.wav
 
@@ -101,7 +104,8 @@ midi-cli-rs generate --notes "C4:0.5:80@0,E4:0.5:80@0.5,G4:0.5:80@1" -o arp.wav
 # JSON input for complex sequences
 echo '{"tempo":120,"instrument":"strings","notes":[...]}' | midi-cli-rs generate --json -o out.wav
 
-# List instruments
+# List moods/instruments
+midi-cli-rs moods
 midi-cli-rs instruments</div>
     </div>
 
@@ -173,6 +177,55 @@ midi-cli-rs instruments</div>
         <div class="description">Woodwind melody line</div>
         <div class="cli-command">midi-cli-rs generate --notes "G5:0.5:70,A5:0.5:75,B5:0.5:80,C6:1:85,B5:0.5:75,A5:0.5:70,G5:1:80" -i flute -t 88 -o 10-flute-melody.wav</div>
         <audio controls src="10-flute-melody.wav"></audio>
+    </div>
+
+    <div class="info">
+        <h2>Mood Presets</h2>
+        <p>Generate complete musical moods with a single command. Each preset creates multi-layered compositions with appropriate instruments, harmonies, and textures.</p>
+        <div class="usage-examples">
+# Quick suspenseful intro
+midi-cli-rs preset --mood suspense --duration 5 -o intro.wav
+
+# Upbeat with specific key and reproducible seed
+midi-cli-rs preset -m upbeat -d 7 --key C --intensity 80 --seed 42 -o outro.wav
+
+# List all available moods
+midi-cli-rs moods</div>
+    </div>
+
+    <div class="sample" style="border-left-color: #ff4444;">
+        <h3>11. Suspense Preset</h3>
+        <div class="description">Tense mood with low cello drones, tremolo strings, and sparse dissonant piano hits</div>
+        <div class="cli-command">midi-cli-rs preset --mood suspense --duration 5 --intensity 70 --seed 42 -o 11-preset-suspense.wav</div>
+        <audio controls src="11-preset-suspense.wav"></audio>
+    </div>
+
+    <div class="sample" style="border-left-color: #9944ff;">
+        <h3>12. Eerie Preset</h3>
+        <div class="description">Creepy atmosphere with diminished pad, sparse bell tones, and breath texture</div>
+        <div class="cli-command">midi-cli-rs preset --mood eerie --duration 5 --intensity 60 --seed 42 -o 12-preset-eerie.wav</div>
+        <audio controls src="12-preset-eerie.wav"></audio>
+    </div>
+
+    <div class="sample" style="border-left-color: #44ff44;">
+        <h3>13. Upbeat Preset</h3>
+        <div class="description">Energetic mood with rhythmic piano chords, bass line, and melody hints</div>
+        <div class="cli-command">midi-cli-rs preset --mood upbeat --duration 5 --key C --intensity 80 --seed 42 -o 13-preset-upbeat.wav</div>
+        <audio controls src="13-preset-upbeat.wav"></audio>
+    </div>
+
+    <div class="sample" style="border-left-color: #44aaff;">
+        <h3>14. Calm Preset</h3>
+        <div class="description">Peaceful mood with warm major 7th pad and gentle harp arpeggio</div>
+        <div class="cli-command">midi-cli-rs preset --mood calm --duration 5 --key G --intensity 50 --seed 42 -o 14-preset-calm.wav</div>
+        <audio controls src="14-preset-calm.wav"></audio>
+    </div>
+
+    <div class="sample" style="border-left-color: #ffaa44;">
+        <h3>15. Ambient Preset</h3>
+        <div class="description">Atmospheric soundscape with layered string drones and pentatonic vibraphone tones</div>
+        <div class="cli-command">midi-cli-rs preset --mood ambient --duration 7 --key Em --intensity 40 --seed 42 -o 15-preset-ambient.wav</div>
+        <audio controls src="15-preset-ambient.wav"></audio>
     </div>
 
     <div class="info">

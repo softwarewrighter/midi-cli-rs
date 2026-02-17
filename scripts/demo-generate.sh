@@ -123,6 +123,71 @@ echo "10. Flute melody"
     --tempo 88 \
     --output "$PREVIEW_DIR/10-flute-melody.wav"
 
+# ============================================
+# MOOD PRESETS
+# ============================================
+echo ""
+echo "=== Mood Presets ==="
+echo ""
+
+# ============================================
+# Example 11: Suspense preset
+# ============================================
+echo "11. Suspense preset (5 sec)"
+"$CLI" preset \
+    --mood suspense \
+    --duration 5 \
+    --intensity 70 \
+    --seed 42 \
+    --output "$PREVIEW_DIR/11-preset-suspense.wav"
+
+# ============================================
+# Example 12: Eerie preset
+# ============================================
+echo "12. Eerie preset (5 sec)"
+"$CLI" preset \
+    --mood eerie \
+    --duration 5 \
+    --intensity 60 \
+    --seed 42 \
+    --output "$PREVIEW_DIR/12-preset-eerie.wav"
+
+# ============================================
+# Example 13: Upbeat preset
+# ============================================
+echo "13. Upbeat preset (5 sec)"
+"$CLI" preset \
+    --mood upbeat \
+    --duration 5 \
+    --key C \
+    --intensity 80 \
+    --seed 42 \
+    --output "$PREVIEW_DIR/13-preset-upbeat.wav"
+
+# ============================================
+# Example 14: Calm preset
+# ============================================
+echo "14. Calm preset (5 sec)"
+"$CLI" preset \
+    --mood calm \
+    --duration 5 \
+    --key G \
+    --intensity 50 \
+    --seed 42 \
+    --output "$PREVIEW_DIR/14-preset-calm.wav"
+
+# ============================================
+# Example 15: Ambient preset
+# ============================================
+echo "15. Ambient preset (7 sec)"
+"$CLI" preset \
+    --mood ambient \
+    --duration 7 \
+    --key Em \
+    --intensity 40 \
+    --seed 42 \
+    --output "$PREVIEW_DIR/15-preset-ambient.wav"
+
 echo ""
 echo "Generated samples in $PREVIEW_DIR:"
 ls -la "$PREVIEW_DIR"/*.wav 2>/dev/null || echo "No WAV files found"
