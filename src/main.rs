@@ -57,7 +57,7 @@ AI CODING AGENT INSTRUCTIONS:
     - VELOCITY: Volume 0-127 (80 = normal, 100+ = accented)
     - OFFSET: Start time in beats (optional, for chords/timing)
 
-  MOOD PRESETS: suspense, eerie, upbeat, calm, ambient
+  MOOD PRESETS: suspense, eerie, upbeat, calm, ambient, jazz
     Each generates multi-layered compositions with appropriate instruments.
     Use --seed for reproducible output across runs.
 
@@ -127,12 +127,12 @@ enum Commands {
     #[command(long_about = "Generate MIDI/audio using a mood preset.\n\n\
         EXAMPLES:\n  \
         midi-cli-rs preset --mood suspense --duration 5 -o intro.wav\n  \
-        midi-cli-rs preset -m upbeat -d 7 --key C --intensity 80 --seed 42 -o outro.wav\n\n\
-        MOODS: suspense, eerie, upbeat, calm, ambient\n\
+        midi-cli-rs preset -m jazz -d 10 --key Bb --seed 42 -o nightclub.wav\n\n\
+        MOODS: suspense, eerie, upbeat, calm, ambient, jazz\n\
         Use 'moods' command to see descriptions of each preset.\n\n\
         TIP: Use --seed for reproducible output across multiple runs.")]
     Preset {
-        /// Mood preset: suspense, eerie, upbeat, calm, ambient
+        /// Mood preset: suspense, eerie, upbeat, calm, ambient, jazz
         #[arg(short, long)]
         mood: String,
 
@@ -140,7 +140,7 @@ enum Commands {
         #[arg(short, long, default_value = "5")]
         duration: f64,
 
-        /// Musical key: C, Cm, D, Dm, E, Em, F, Fm, G, Gm, A, Am, B, Bm (mood default if omitted)
+        /// Musical key: C, Cm, D, Dm, Eb, E, Em, F, Fm, G, Gm, A, Am, Bb, B, Bm
         #[arg(short, long)]
         key: Option<String>,
 
@@ -387,8 +387,12 @@ fn run(command: Commands) -> Result<(), Box<dyn std::error::Error>> {
                 "{:<12} {:<8} Atmospheric mood with drones and pentatonic tones",
                 "ambient", "Em"
             );
+            println!(
+                "{:<12} {:<8} Nightclub trio with walking bass and piano comping",
+                "jazz", "F"
+            );
             println!("\nUsage: midi-cli-rs preset --mood suspense --duration 5 -o out.wav");
-            println!("       midi-cli-rs preset -m upbeat -d 7 --key C --seed 42 -o intro.wav");
+            println!("       midi-cli-rs preset -m jazz -d 10 --key Bb --seed 42 -o nightclub.wav");
             Ok(())
         }
 

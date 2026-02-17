@@ -68,6 +68,7 @@ The binary will be at `./target/release/midi-cli-rs`.
 | `upbeat` | C | Rhythmic chords, energetic |
 | `calm` | G | Warm pads, gentle arpeggios |
 | `ambient` | Em | Textural drones, pentatonic bells |
+| `jazz` | F | Walking bass, piano comping, swing |
 
 ```bash
 midi-cli-rs preset \

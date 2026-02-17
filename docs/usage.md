@@ -28,6 +28,7 @@ Use presets for instant, professionally-designed compositions:
 | `upbeat` | C | Rhythmic chords, bass, energetic | Tech reviews, tutorials |
 | `calm` | G | Warm pads, gentle arpeggios | Lifestyle, meditation |
 | `ambient` | Em | Textural drones, pentatonic bells | Documentary, nature |
+| `jazz` | F | Walking bass, piano comping, swing | Nightclub, sophisticated |
 
 ### Preset Parameters
 

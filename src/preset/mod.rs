@@ -6,12 +6,14 @@
 mod ambient;
 mod calm;
 mod eerie;
+mod jazz;
 mod suspense;
 mod upbeat;
 
 pub use ambient::AmbientPreset;
 pub use calm::CalmPreset;
 pub use eerie::EeriePreset;
+pub use jazz::JazzPreset;
 pub use suspense::SuspensePreset;
 pub use upbeat::UpbeatPreset;
 
@@ -26,6 +28,8 @@ pub enum Key {
     Cm,
     D,
     Dm,
+    Eb,
+    Ebm,
     E,
     Em,
     F,
@@ -34,18 +38,22 @@ pub enum Key {
     Gm,
     A,
     Am,
+    Bb,
+    Bbm,
     B,
     Bm,
 }
 
 impl Key {
-    /// Parse key from string (e.g., "Am", "C", "F#m")
+    /// Parse key from string (e.g., "Am", "C", "F#m", "Bb", "Eb")
     pub fn parse(s: &str) -> Option<Self> {
         match s.to_lowercase().as_str() {
             "c" => Some(Key::C),
             "cm" => Some(Key::Cm),
             "d" => Some(Key::D),
             "dm" => Some(Key::Dm),
+            "eb" | "d#" => Some(Key::Eb),
+            "ebm" | "d#m" => Some(Key::Ebm),
             "e" => Some(Key::E),
             "em" => Some(Key::Em),
             "f" => Some(Key::F),
@@ -54,6 +62,8 @@ impl Key {
             "gm" => Some(Key::Gm),
             "a" => Some(Key::A),
             "am" => Some(Key::Am),
+            "bb" | "a#" => Some(Key::Bb),
+            "bbm" | "a#m" => Some(Key::Bbm),
             "b" => Some(Key::B),
             "bm" => Some(Key::Bm),
             _ => None,
@@ -65,10 +75,12 @@ impl Key {
         match self {
             Key::C | Key::Cm => 60,
             Key::D | Key::Dm => 62,
+            Key::Eb | Key::Ebm => 63,
             Key::E | Key::Em => 64,
             Key::F | Key::Fm => 65,
             Key::G | Key::Gm => 67,
             Key::A | Key::Am => 69,
+            Key::Bb | Key::Bbm => 70,
             Key::B | Key::Bm => 71,
         }
     }
@@ -77,7 +89,7 @@ impl Key {
     pub fn is_minor(&self) -> bool {
         matches!(
             self,
-            Key::Cm | Key::Dm | Key::Em | Key::Fm | Key::Gm | Key::Am | Key::Bm
+            Key::Cm | Key::Dm | Key::Ebm | Key::Em | Key::Fm | Key::Gm | Key::Am | Key::Bbm | Key::Bm
         )
     }
 
@@ -111,6 +123,7 @@ pub enum Mood {
     Upbeat,
     Calm,
     Ambient,
+    Jazz,
 }
 
 impl Mood {
@@ -122,6 +135,7 @@ impl Mood {
             "upbeat" | "happy" | "energetic" => Some(Mood::Upbeat),
             "calm" | "peaceful" | "serene" => Some(Mood::Calm),
             "ambient" | "atmospheric" | "drone" => Some(Mood::Ambient),
+            "jazz" | "jazzy" | "swing" => Some(Mood::Jazz),
             _ => None,
         }
     }
@@ -134,6 +148,7 @@ impl Mood {
             Mood::Upbeat => Key::C,
             Mood::Calm => Key::G,
             Mood::Ambient => Key::Em,
+            Mood::Jazz => Key::F, // Common jazz key
         }
     }
 }
@@ -185,6 +200,7 @@ pub fn generate_mood(mood: Mood, config: &PresetConfig) -> Vec<NoteSequence> {
         Mood::Upbeat => UpbeatPreset.generate(config),
         Mood::Calm => CalmPreset.generate(config),
         Mood::Ambient => AmbientPreset.generate(config),
+        Mood::Jazz => JazzPreset.generate(config),
     }
 }
 
@@ -243,6 +259,7 @@ mod tests {
             Mood::Upbeat,
             Mood::Calm,
             Mood::Ambient,
+            Mood::Jazz,
         ] {
             let sequences = generate_mood(mood, &config);
             assert!(

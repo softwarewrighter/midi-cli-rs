@@ -188,6 +188,18 @@ echo "15. Ambient preset (7 sec)"
     --seed 42 \
     --output "$PREVIEW_DIR/15-preset-ambient.wav"
 
+# ============================================
+# Example 16: Jazz preset
+# ============================================
+echo "16. Jazz preset (8 sec)"
+"$CLI" preset \
+    --mood jazz \
+    --duration 8 \
+    --key Bb \
+    --intensity 70 \
+    --seed 42 \
+    --output "$PREVIEW_DIR/16-preset-jazz.wav"
+
 echo ""
 echo "Generated samples in $PREVIEW_DIR:"
 ls -la "$PREVIEW_DIR"/*.wav 2>/dev/null || echo "No WAV files found"

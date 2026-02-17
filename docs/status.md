@@ -57,7 +57,7 @@
 
 ### Tests
 
-- 58 unit tests passing (19 new preset tests)
+- 62 unit tests passing (23 preset tests including jazz)
 - Zero clippy warnings
 - Code formatted
 
