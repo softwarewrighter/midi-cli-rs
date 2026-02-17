@@ -6,7 +6,7 @@ Generate short music samples (intros, outros, background tracks) for video conte
 
 ## Features
 
-- **Mood Presets**: Generate complete compositions with a single command (suspense, eerie, upbeat, calm, ambient)
+- **Mood Presets**: Generate complete compositions with a single command (suspense, eerie, upbeat, calm, ambient, jazz)
 - **Note Control**: Specify exact notes with pitch, duration, velocity, and timing
 - **Multiple Formats**: Output MIDI files or render directly to WAV audio
 - **JSON Input**: Support for complex multi-track arrangements via stdin
@@ -143,8 +143,39 @@ All Rust dependencies use permissive licenses (MIT/Apache-2.0):
 | chrono | Timestamp formatting |
 
 External:
-- **FluidSynth** (LGPL-2.1): WAV rendering
-- **TimGM6mb.sf2** (MIT): Bundled SoundFont
+- **FluidSynth** (LGPL-2.1): WAV rendering engine
+
+## SoundFonts
+
+SoundFonts (.sf2 files) contain the audio samples used to render MIDI to audio. **Be aware of SoundFont licenses before using rendered audio commercially.**
+
+### License Considerations
+
+| SoundFont | License | Commercial Audio | Notes |
+|-----------|---------|------------------|-------|
+| GeneralUser GS | Permissive | Yes | Explicitly allows commercial music production |
+| FluidR3_GM | MIT | Yes | Clear commercial use rights |
+| MuseScore_General | MIT | Yes | High quality, larger file (~200MB) |
+| TimGM6mb | GPL v2 | Unclear | Debate over whether rendered audio is "derivative" |
+
+### Specifying a SoundFont
+
+```bash
+# Use a specific soundfont
+midi-cli-rs preset -m jazz -d 5 --soundfont /path/to/FluidR3_GM.sf2 -o out.wav
+
+# Auto-detection searches common paths:
+# ./soundfonts/, /opt/homebrew/share/soundfonts/, /usr/share/sounds/sf2/
+```
+
+### Recommended SoundFonts for Commercial Use
+
+For unambiguous commercial licensing of rendered audio:
+
+1. **GeneralUser GS** (~30MB) - [Download](https://schristiancollins.com/generaluser.php)
+   - Explicitly permits commercial music production
+2. **FluidR3_GM** (~140MB) - MIT licensed
+   - Available via `brew install fluid-synth` or package managers
 
 ## License
 
