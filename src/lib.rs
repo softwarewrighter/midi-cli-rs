@@ -4,6 +4,7 @@
 //! note sequences, instrument selection, and mood presets.
 
 pub mod midi;
+pub mod preset;
 
 pub use midi::note::NoteError;
 pub use midi::sequence::{
@@ -11,3 +12,4 @@ pub use midi::sequence::{
 };
 pub use midi::writer::{MidiWriteError, write_midi, write_midi_single};
 pub use midi::{Note, NoteSequence};
+pub use preset::{Key, Mood, MoodGenerator, PresetConfig, generate_mood};

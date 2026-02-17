@@ -3,7 +3,10 @@
 //! Generate MIDI files and WAV audio from note specifications or mood presets.
 
 use clap::{Parser, Subcommand};
-use midi_cli_rs::{JsonSequenceInput, Note, NoteSequence, resolve_instrument, write_midi};
+use midi_cli_rs::{
+    JsonSequenceInput, Key, Mood, Note, NoteSequence, PresetConfig, generate_mood,
+    resolve_instrument, write_midi,
+};
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
@@ -47,6 +50,41 @@ enum Commands {
         soundfont: Option<PathBuf>,
     },
 
+    /// Generate MIDI/audio using a mood preset
+    Preset {
+        /// Mood preset (suspense, eerie, upbeat, calm, ambient)
+        #[arg(short, long)]
+        mood: String,
+
+        /// Duration in seconds
+        #[arg(short, long, default_value = "5")]
+        duration: f64,
+
+        /// Musical key (C, Cm, D, Dm, E, Em, F, Fm, G, Gm, A, Am, B, Bm)
+        #[arg(short, long)]
+        key: Option<String>,
+
+        /// Intensity level (0-100)
+        #[arg(long, default_value = "50")]
+        intensity: u8,
+
+        /// Tempo in BPM
+        #[arg(short, long, default_value = "90")]
+        tempo: u16,
+
+        /// Random seed for reproducibility
+        #[arg(short, long)]
+        seed: Option<u64>,
+
+        /// Output file path (.mid or .wav)
+        #[arg(short, long)]
+        output: PathBuf,
+
+        /// SoundFont file for WAV rendering
+        #[arg(long)]
+        soundfont: Option<PathBuf>,
+    },
+
     /// Render existing MIDI file to WAV
     Render {
         /// Input MIDI file
@@ -64,6 +102,9 @@ enum Commands {
 
     /// List available instruments
     Instruments,
+
+    /// List available mood presets
+    Moods,
 
     /// Show information about a MIDI file
     Info {
@@ -137,6 +178,78 @@ fn run(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
             Ok(())
         }
 
+        Commands::Preset {
+            mood,
+            duration,
+            key,
+            intensity,
+            tempo,
+            seed,
+            output,
+            soundfont,
+        } => {
+            // Parse mood
+            let mood_enum = Mood::parse(&mood).ok_or_else(|| {
+                format!("Unknown mood: {mood}. Available: suspense, eerie, upbeat, calm, ambient")
+            })?;
+
+            // Parse key (or use mood default)
+            let key_enum = if let Some(k) = key {
+                Key::parse(&k)
+                    .ok_or_else(|| format!("Unknown key: {k}. Examples: C, Am, F#m, Bb"))?
+            } else {
+                mood_enum.default_key()
+            };
+
+            // Create config
+            let config = PresetConfig {
+                duration_secs: duration,
+                key: key_enum,
+                intensity: intensity.min(100),
+                seed: seed.unwrap_or_else(|| {
+                    std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .map(|d| d.as_secs())
+                        .unwrap_or(42)
+                }),
+                tempo,
+            };
+
+            // Generate sequences
+            let sequences = generate_mood(mood_enum, &config);
+
+            if sequences.is_empty() {
+                return Err("No sequences generated".into());
+            }
+
+            // Determine output format from extension
+            let ext = output.extension().and_then(|s| s.to_str()).unwrap_or("mid");
+
+            let midi_path = if ext == "wav" {
+                output.with_extension("mid")
+            } else {
+                output.clone()
+            };
+
+            // Write MIDI file
+            write_midi(&sequences, &midi_path)?;
+            eprintln!(
+                "Generated {:?} preset (seed: {}, key: {:?}): {}",
+                mood_enum,
+                config.seed,
+                key_enum,
+                midi_path.display()
+            );
+
+            // Render to WAV if requested
+            if ext == "wav" {
+                render_wav(&midi_path, &output, soundfont.as_ref())?;
+                eprintln!("Rendered WAV: {}", output.display());
+            }
+
+            Ok(())
+        }
+
         Commands::Render {
             input,
             output,
@@ -155,6 +268,35 @@ fn run(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
                 println!("{name:<20} {num}");
             }
             println!("\nYou can also use program numbers directly (0-127).");
+            Ok(())
+        }
+
+        Commands::Moods => {
+            println!("Available mood presets:\n");
+            println!("{:<12} {:<8} DESCRIPTION", "MOOD", "KEY");
+            println!("{:-<60}", "");
+            println!(
+                "{:<12} {:<8} Tense mood with low drones and tremolo strings",
+                "suspense", "Am"
+            );
+            println!(
+                "{:<12} {:<8} Creepy mood with sparse tones and diminished harmony",
+                "eerie", "Dm"
+            );
+            println!(
+                "{:<12} {:<8} Energetic mood with rhythmic patterns",
+                "upbeat", "C"
+            );
+            println!(
+                "{:<12} {:<8} Peaceful mood with sustained pads and arpeggios",
+                "calm", "G"
+            );
+            println!(
+                "{:<12} {:<8} Atmospheric mood with drones and pentatonic tones",
+                "ambient", "Em"
+            );
+            println!("\nUsage: midi-cli-rs preset --mood suspense --duration 5 -o out.wav");
+            println!("       midi-cli-rs preset -m upbeat -d 7 --key C --seed 42 -o intro.wav");
             Ok(())
         }
 

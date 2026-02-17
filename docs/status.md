@@ -4,12 +4,12 @@
 
 ## Current Phase
 
-**Phase 1: Core Implementation** - COMPLETE
+**Phase 4: Mood Presets** - COMPLETE
 
 ## Overall Progress
 
 ```
-[########--] 80% Complete
+[#########-] 90% Complete
 ```
 
 | Phase | Status | Progress |
@@ -18,7 +18,7 @@
 | Phase 1: Core MIDI Generation | Complete | 100% |
 | Phase 2: CLI Interface | Complete | 100% |
 | Phase 3: WAV Rendering | Complete | 100% |
-| Phase 4: Mood Presets | Not Started | 0% |
+| Phase 4: Mood Presets | Complete | 100% |
 | Phase 5: Polish | Not Started | 0% |
 
 ## Completed Work
@@ -42,9 +42,22 @@
 - [x] Created demo scripts (scripts/demo-generate.sh)
 - [x] Created preview directory with index.html and 10 sample WAVs
 
+### Phase 4: Mood Presets (2026-02-16)
+
+- [x] Implemented MoodGenerator trait in src/preset/mod.rs
+- [x] Implemented Key enum with musical theory (root notes, chord tones)
+- [x] Implemented Mood enum with 5 presets
+- [x] Created Suspense preset (low drones, tremolo strings, sparse piano)
+- [x] Created Eerie preset (diminished pad, bells, breath texture)
+- [x] Created Upbeat preset (rhythmic chords, bass line, melody)
+- [x] Created Calm preset (major 7th pad, gentle harp arpeggio)
+- [x] Created Ambient preset (layered drones, pentatonic tones)
+- [x] Added `preset` CLI command with mood, duration, key, intensity, seed options
+- [x] Added `moods` CLI command to list available presets
+
 ### Tests
 
-- 39 unit tests passing
+- 58 unit tests passing (19 new preset tests)
 - Zero clippy warnings
 - Code formatted
 
@@ -59,6 +72,13 @@ midi-cli-rs generate --notes "C4:1:80,E4:0.5:100@1" -i strings -o output.wav
 
 # JSON input
 echo '{"tempo":120,"instrument":"piano","notes":[...]}' | midi-cli-rs generate --json -o out.wav
+
+# Generate using mood preset
+midi-cli-rs preset --mood suspense --duration 5 -o suspense.wav
+midi-cli-rs preset -m upbeat -d 7 --key C --intensity 80 --seed 42 -o intro.wav
+
+# List available mood presets
+midi-cli-rs moods
 
 # List instruments
 midi-cli-rs instruments
@@ -108,27 +128,29 @@ Open `preview/index.html` in a browser to listen.
 
 ## Next Steps
 
-### Phase 4: Mood Presets
-
-1. Implement MoodGenerator trait
-2. Implement preset generators:
-   - Suspense (minor key, drones, tremolo)
-   - Eerie (sparse, dissonant, wide intervals)
-   - Upbeat (major key, rhythmic)
-   - Calm (sustained pads, arpeggios)
-   - Ambient (drones, textures)
-3. Add `preset` command
-
 ### Phase 5: Polish
 
 1. Comprehensive error messages
 2. README with full documentation
 3. More test coverage
 4. Performance optimization
+5. Update demo scripts with preset examples
 
 ## Notes for AI Agents
 
-**Working Example**:
+**Using Mood Presets** (recommended for quick results):
+```bash
+# Generate a 5-second suspenseful intro
+midi-cli-rs preset --mood suspense --duration 5 -o intro.wav
+
+# Generate upbeat outro with specific key and seed for reproducibility
+midi-cli-rs preset -m upbeat -d 7 --key C --intensity 80 --seed 42 -o outro.wav
+
+# Available moods: suspense, eerie, upbeat, calm, ambient
+midi-cli-rs moods  # List all presets with descriptions
+```
+
+**Manual Note Control**:
 ```bash
 # Generate a 3-second piano intro
 midi-cli-rs generate \
