@@ -2,6 +2,7 @@
 //!
 //! Generate MIDI files and WAV audio from note specifications or mood presets.
 
+use chrono::{DateTime, Utc};
 use clap::{Parser, Subcommand};
 use midi_cli_rs::{
     JsonSequenceInput, Key, Mood, Note, NoteSequence, PresetConfig, generate_mood,
@@ -11,102 +12,181 @@ use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 
+// Include generated version info
+mod version_info {
+    include!(concat!(env!("OUT_DIR"), "/version_info.rs"));
+}
+
+/// Format version string with build info
+fn format_version() -> String {
+    let datetime = DateTime::<Utc>::from_timestamp_millis(version_info::BUILD_TIMESTAMP)
+        .unwrap_or(DateTime::<Utc>::UNIX_EPOCH);
+    let short_sha = if version_info::GIT_COMMIT_SHA.len() > 7 {
+        &version_info::GIT_COMMIT_SHA[..7]
+    } else {
+        version_info::GIT_COMMIT_SHA
+    };
+
+    format!(
+        "Version: {}\n{}\n{} License: {}\nBuild Commit: {}\nBuild Host: {}\nBuild Time: {}",
+        version_info::VERSION,
+        version_info::COPYRIGHT,
+        version_info::LICENSE_NAME,
+        version_info::LICENSE_URL,
+        short_sha,
+        version_info::BUILD_HOST,
+        datetime.to_rfc3339()
+    )
+}
+
+const LONG_ABOUT: &str = r#"CLI tool for AI coding agents to generate MIDI music programmatically.
+
+AI CODING AGENT INSTRUCTIONS:
+
+  QUICK START:
+    # Use mood presets for instant results (recommended)
+    midi-cli-rs preset --mood suspense --duration 5 -o intro.wav
+    midi-cli-rs preset -m upbeat -d 7 --key C --seed 42 -o outro.wav
+
+    # Or specify exact notes for precise control
+    midi-cli-rs generate --notes "C4:1:80,E4:0.5:100@1" -i piano -o melody.wav
+
+  NOTE FORMAT: PITCH:DURATION:VELOCITY[@OFFSET]
+    - PITCH: Note name + octave (C4, F#3, Bb5, 60)
+    - DURATION: Length in beats (1.0 = quarter note at tempo)
+    - VELOCITY: Volume 0-127 (80 = normal, 100+ = accented)
+    - OFFSET: Start time in beats (optional, for chords/timing)
+
+  MOOD PRESETS: suspense, eerie, upbeat, calm, ambient
+    Each generates multi-layered compositions with appropriate instruments.
+    Use --seed for reproducible output across runs.
+
+  OUTPUT FORMATS:
+    - .mid: MIDI file only (fast, no dependencies)
+    - .wav: MIDI + audio render (requires FluidSynth)
+
+  COMBINING TRACKS (post-processing with external tools):
+    ffmpeg -i track1.wav -i track2.wav -filter_complex amix=inputs=2 combined.wav
+
+  DEPENDENCIES:
+    - FluidSynth: Required for WAV output (brew install fluid-synth)
+    - SoundFont: Auto-detected or specify with --soundfont
+
+  SEE ALSO: docs/usage.md for comprehensive usage guide"#;
+
 /// CLI tool for AI agents to generate MIDI music programmatically
 #[derive(Parser)]
 #[command(name = "midi-cli-rs")]
-#[command(author, version, about, long_about = None)]
+#[command(author, version = version_info::VERSION, about, long_about = LONG_ABOUT)]
 struct Cli {
+    /// Show detailed version information with build metadata
+    #[arg(short = 'V', long = "version", action = clap::ArgAction::SetTrue, global = true)]
+    version: bool,
+
     #[command(subcommand)]
-    command: Commands,
+    command: Option<Commands>,
 }
 
 #[derive(Subcommand)]
 enum Commands {
     /// Generate MIDI/audio from explicit notes
+    #[command(long_about = "Generate MIDI/audio from explicit note specifications.\n\n\
+        EXAMPLES:\n  \
+        midi-cli-rs generate --notes \"C4:1:80,E4:0.5:100@1\" -i piano -o melody.wav\n  \
+        echo '{\"tempo\":120,\"notes\":[...]}' | midi-cli-rs generate --json -o out.wav\n\n\
+        NOTE FORMAT: PITCH:DURATION:VELOCITY[@OFFSET]\n  \
+        - C4:1:80 = Middle C, 1 beat, velocity 80\n  \
+        - F#3:0.5:100@2 = F# octave 3, half beat, loud, starts at beat 2")]
     Generate {
-        /// Notes as "PITCH:DURATION:VELOCITY[@OFFSET],..."
-        /// Example: "C4:1:80,E4:0.5:100@1,G4:0.5:100@1.5"
+        /// Notes as "PITCH:DURATION:VELOCITY[@OFFSET],..." (e.g., "C4:1:80,E4:0.5:100@1")
         #[arg(short, long)]
         notes: Option<String>,
 
-        /// Read JSON note data from stdin
+        /// Read JSON note data from stdin (for complex multi-track sequences)
         #[arg(short, long)]
         json: bool,
 
-        /// Instrument name or GM program number (0-127)
+        /// Instrument name or GM program number 0-127 (use 'instruments' to list)
         #[arg(short, long, default_value = "piano")]
         instrument: String,
 
-        /// Tempo in BPM
+        /// Tempo in BPM (beats per minute)
         #[arg(short, long, default_value = "120")]
         tempo: u16,
 
-        /// Output file path (.mid or .wav)
+        /// Output file path (.mid for MIDI only, .wav for audio)
         #[arg(short, long)]
         output: PathBuf,
 
-        /// SoundFont file for WAV rendering
+        /// SoundFont file for WAV rendering (auto-detected if not specified)
         #[arg(long)]
         soundfont: Option<PathBuf>,
     },
 
-    /// Generate MIDI/audio using a mood preset
+    /// Generate MIDI/audio using a mood preset (recommended for quick results)
+    #[command(long_about = "Generate MIDI/audio using a mood preset.\n\n\
+        EXAMPLES:\n  \
+        midi-cli-rs preset --mood suspense --duration 5 -o intro.wav\n  \
+        midi-cli-rs preset -m upbeat -d 7 --key C --intensity 80 --seed 42 -o outro.wav\n\n\
+        MOODS: suspense, eerie, upbeat, calm, ambient\n\
+        Use 'moods' command to see descriptions of each preset.\n\n\
+        TIP: Use --seed for reproducible output across multiple runs.")]
     Preset {
-        /// Mood preset (suspense, eerie, upbeat, calm, ambient)
+        /// Mood preset: suspense, eerie, upbeat, calm, ambient
         #[arg(short, long)]
         mood: String,
 
-        /// Duration in seconds
+        /// Duration in seconds (typically 3-15 for intro/outro)
         #[arg(short, long, default_value = "5")]
         duration: f64,
 
-        /// Musical key (C, Cm, D, Dm, E, Em, F, Fm, G, Gm, A, Am, B, Bm)
+        /// Musical key: C, Cm, D, Dm, E, Em, F, Fm, G, Gm, A, Am, B, Bm (mood default if omitted)
         #[arg(short, long)]
         key: Option<String>,
 
-        /// Intensity level (0-100)
+        /// Intensity level 0-100 (affects layering and dynamics)
         #[arg(long, default_value = "50")]
         intensity: u8,
 
-        /// Tempo in BPM
+        /// Tempo in BPM (beats per minute)
         #[arg(short, long, default_value = "90")]
         tempo: u16,
 
-        /// Random seed for reproducibility
+        /// Random seed for reproducible output (auto-generated if omitted)
         #[arg(short, long)]
         seed: Option<u64>,
 
-        /// Output file path (.mid or .wav)
+        /// Output file path (.mid for MIDI only, .wav for audio)
         #[arg(short, long)]
         output: PathBuf,
 
-        /// SoundFont file for WAV rendering
+        /// SoundFont file for WAV rendering (auto-detected if not specified)
         #[arg(long)]
         soundfont: Option<PathBuf>,
     },
 
-    /// Render existing MIDI file to WAV
+    /// Render existing MIDI file to WAV audio
     Render {
-        /// Input MIDI file
+        /// Input MIDI file to render
         #[arg(short, long)]
         input: PathBuf,
 
-        /// Output WAV file
+        /// Output WAV file path
         #[arg(short, long)]
         output: PathBuf,
 
-        /// SoundFont file for rendering
+        /// SoundFont file for rendering (auto-detected if not specified)
         #[arg(long)]
         soundfont: Option<PathBuf>,
     },
 
-    /// List available instruments
+    /// List available instruments (General MIDI names and program numbers)
     Instruments,
 
-    /// List available mood presets
+    /// List available mood presets with descriptions
     Moods,
 
-    /// Show information about a MIDI file
+    /// Show information about a MIDI file (format, tracks, events)
     Info {
         /// MIDI file to inspect
         file: PathBuf,
@@ -116,7 +196,19 @@ enum Commands {
 fn main() -> ExitCode {
     let cli = Cli::parse();
 
-    match run(cli) {
+    // Handle -V/--version flag
+    if cli.version {
+        println!("{}", format_version());
+        return ExitCode::SUCCESS;
+    }
+
+    // Require a subcommand if not showing version
+    let Some(command) = cli.command else {
+        eprintln!("ERROR: No command specified. Use --help for usage.");
+        return ExitCode::FAILURE;
+    };
+
+    match run(command) {
         Ok(()) => ExitCode::SUCCESS,
         Err(e) => {
             eprintln!("ERROR: {e}");
@@ -125,8 +217,8 @@ fn main() -> ExitCode {
     }
 }
 
-fn run(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
-    match cli.command {
+fn run(command: Commands) -> Result<(), Box<dyn std::error::Error>> {
+    match command {
         Commands::Generate {
             notes,
             json,

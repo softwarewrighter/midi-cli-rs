@@ -2,9 +2,11 @@
 name = "midi-cli-rs"
 version = "0.1.0"
 edition = "2024"
+authors = ["Michael A Wright"]
 description = "CLI tool for AI agents to generate MIDI music programmatically"
 license = "MIT"
 repository = "https://github.com/softwarewrighter/midi-cli-rs"
+build = "build.rs"
 
 [[bin]]
 name = "midi-cli-rs"
@@ -26,6 +28,9 @@ thiserror = "1"
 
 # Randomization for presets (MIT/Apache-2.0)
 rand = "0.8"
+
+# Timestamp formatting for version info (MIT/Apache-2.0)
+chrono = "0.4"
 
 [dev-dependencies]
 tempfile = "3"
