@@ -77,7 +77,7 @@ AI CODING AGENT INSTRUCTIONS:
 /// CLI tool for AI agents to generate MIDI music programmatically
 #[derive(Parser)]
 #[command(name = "midi-cli-rs")]
-#[command(author, version = version_info::VERSION, about, long_about = LONG_ABOUT)]
+#[command(author, version = version_info::VERSION, about, long_about = LONG_ABOUT, disable_version_flag = true)]
 struct Cli {
     /// Show detailed version information with build metadata
     #[arg(short = 'V', long = "version", action = clap::ArgAction::SetTrue, global = true)]
