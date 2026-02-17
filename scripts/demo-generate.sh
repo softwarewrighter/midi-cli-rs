@@ -1,0 +1,130 @@
+#!/bin/bash
+# Demo script showing midi-cli-rs usage patterns for AI coding agents
+# This script generates various audio samples and places them in ./preview/
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+CLI="$PROJECT_DIR/target/release/midi-cli-rs"
+PREVIEW_DIR="$PROJECT_DIR/preview"
+
+# Build if needed
+if [[ ! -f "$CLI" ]]; then
+    echo "Building midi-cli-rs..."
+    cargo build --release --manifest-path "$PROJECT_DIR/Cargo.toml"
+fi
+
+# Create preview directory
+mkdir -p "$PREVIEW_DIR"
+
+echo "Generating audio samples..."
+echo ""
+
+# ============================================
+# Example 1: Simple C Major Chord (arpeggiated)
+# ============================================
+echo "1. C Major Chord (arpeggiated) - piano"
+"$CLI" generate \
+    --notes "C4:0.5:80@0,E4:0.5:80@0.5,G4:0.5:80@1,C5:1:80@1.5" \
+    --instrument piano \
+    --tempo 120 \
+    --output "$PREVIEW_DIR/01-c-major-arpeggio.wav"
+
+# ============================================
+# Example 2: Simple melody
+# ============================================
+echo "2. Simple melody - piano"
+"$CLI" generate \
+    --notes "C4:0.5:80,D4:0.5:70,E4:0.5:80,F4:0.5:70,G4:1:90,E4:0.5:80,C4:1:100" \
+    --instrument piano \
+    --tempo 100 \
+    --output "$PREVIEW_DIR/02-simple-melody.wav"
+
+# ============================================
+# Example 3: Low drone (suspense element)
+# ============================================
+echo "3. Low drone - cello"
+"$CLI" generate \
+    --notes "C2:4:60,G2:4:50@0" \
+    --instrument cello \
+    --tempo 60 \
+    --output "$PREVIEW_DIR/03-low-drone.wav"
+
+# ============================================
+# Example 4: String pad
+# ============================================
+echo "4. String pad - strings"
+"$CLI" generate \
+    --notes "C3:4:50,E3:4:50@0,G3:4:50@0,C4:4:40@0" \
+    --instrument strings \
+    --tempo 60 \
+    --output "$PREVIEW_DIR/04-string-pad.wav"
+
+# ============================================
+# Example 5: Upbeat rhythm
+# ============================================
+echo "5. Upbeat rhythm - piano"
+"$CLI" generate \
+    --notes "C4:0.25:90@0,C4:0.25:70@0.5,E4:0.25:90@1,E4:0.25:70@1.5,G4:0.25:90@2,G4:0.25:70@2.5,C5:0.5:100@3" \
+    --instrument piano \
+    --tempo 140 \
+    --output "$PREVIEW_DIR/05-upbeat-rhythm.wav"
+
+# ============================================
+# Example 6: Bass line
+# ============================================
+echo "6. Bass line - electric bass"
+"$CLI" generate \
+    --notes "C2:1:100@0,G2:0.5:80@1,C2:0.5:90@1.5,E2:1:100@2,G2:1:80@3" \
+    --instrument bass \
+    --tempo 100 \
+    --output "$PREVIEW_DIR/06-bass-line.wav"
+
+# ============================================
+# Example 7: Bells/chimes
+# ============================================
+echo "7. Bells/chimes - vibraphone"
+"$CLI" generate \
+    --notes "C5:2:60@0,E5:2:50@1,G5:2:50@2,C6:3:40@3" \
+    --instrument vibraphone \
+    --tempo 80 \
+    --output "$PREVIEW_DIR/07-bells.wav"
+
+# ============================================
+# Example 8: Minor key (eerie)
+# ============================================
+echo "8. Minor key (eerie) - strings"
+"$CLI" generate \
+    --notes "A3:2:50,C4:2:50@0,E4:2:40@0,A4:4:30@2" \
+    --instrument strings \
+    --tempo 50 \
+    --output "$PREVIEW_DIR/08-minor-eerie.wav"
+
+# ============================================
+# Example 9: JSON input demo
+# ============================================
+echo "9. JSON input - multi-note"
+echo '{"tempo":90,"instrument":"piano","notes":[
+    {"pitch":"C4","duration":0.5,"velocity":80,"offset":0},
+    {"pitch":"E4","duration":0.5,"velocity":80,"offset":0.5},
+    {"pitch":"G4","duration":0.5,"velocity":80,"offset":1},
+    {"pitch":"B4","duration":0.5,"velocity":70,"offset":1.5},
+    {"pitch":"C5","duration":1,"velocity":90,"offset":2}
+]}' | "$CLI" generate --json --output "$PREVIEW_DIR/09-json-demo.wav"
+
+# ============================================
+# Example 10: Flute melody
+# ============================================
+echo "10. Flute melody"
+"$CLI" generate \
+    --notes "G5:0.5:70,A5:0.5:75,B5:0.5:80,C6:1:85,B5:0.5:75,A5:0.5:70,G5:1:80" \
+    --instrument flute \
+    --tempo 88 \
+    --output "$PREVIEW_DIR/10-flute-melody.wav"
+
+echo ""
+echo "Generated samples in $PREVIEW_DIR:"
+ls -la "$PREVIEW_DIR"/*.wav 2>/dev/null || echo "No WAV files found"
+echo ""
+echo "Open $PREVIEW_DIR/index.html in a browser to preview."

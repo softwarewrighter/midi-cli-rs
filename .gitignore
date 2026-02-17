@@ -1,1 +1,13 @@
 /target
+
+# SoundFont files (large, download separately)
+/soundfonts/*.sf2
+
+# Generated preview files (regenerate with scripts/demo-generate.sh)
+/preview/*.wav
+/preview/*.mid
+
+# Test output files
+*.mid
+*.wav
+!preview/index.html

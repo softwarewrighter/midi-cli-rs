@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>midi-cli-rs Audio Preview</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #1a1a2e;
+            color: #eee;
+        }
+        h1 {
+            color: #00d4ff;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #888;
+            margin-bottom: 30px;
+        }
+        .sample {
+            background: #16213e;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 4px solid #00d4ff;
+        }
+        .sample h3 {
+            margin: 0 0 10px 0;
+            color: #00d4ff;
+        }
+        .sample .description {
+            color: #aaa;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+        .sample .cli-command {
+            background: #0f0f23;
+            padding: 10px 15px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 12px;
+            overflow-x: auto;
+            margin-bottom: 15px;
+            color: #00ff88;
+        }
+        audio {
+            width: 100%;
+            height: 40px;
+        }
+        .info {
+            background: #0f3460;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        .info h2 {
+            margin-top: 0;
+            color: #00d4ff;
+        }
+        .info code {
+            background: #16213e;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 14px;
+        }
+        .usage-examples {
+            background: #0f0f23;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 13px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            color: #00ff88;
+        }
+    </style>
+</head>
+<body>
+    <h1>midi-cli-rs Audio Preview</h1>
+    <p class="subtitle">Generated samples demonstrating CLI usage for AI coding agents</p>
+
+    <div class="info">
+        <h2>Quick Start</h2>
+        <p>Generate audio samples with simple CLI commands:</p>
+        <div class="usage-examples">
+# Simple chord
+midi-cli-rs generate --notes "C4:1:80,E4:1:80,G4:1:80" -i piano -o chord.wav
+
+# With timing offsets (arpeggio)
+midi-cli-rs generate --notes "C4:0.5:80@0,E4:0.5:80@0.5,G4:0.5:80@1" -o arp.wav
+
+# JSON input for complex sequences
+echo '{"tempo":120,"instrument":"strings","notes":[...]}' | midi-cli-rs generate --json -o out.wav
+
+# List instruments
+midi-cli-rs instruments</div>
+    </div>
+
+    <div class="sample">
+        <h3>1. C Major Chord (Arpeggiated)</h3>
+        <div class="description">Piano arpeggio demonstrating note timing with @offset</div>
+        <div class="cli-command">midi-cli-rs generate --notes "C4:0.5:80@0,E4:0.5:80@0.5,G4:0.5:80@1,C5:1:80@1.5" -i piano -t 120 -o 01-c-major-arpeggio.wav</div>
+        <audio controls src="01-c-major-arpeggio.wav"></audio>
+    </div>
+
+    <div class="sample">
+        <h3>2. Simple Melody</h3>
+        <div class="description">Sequential notes without explicit timing - auto-sequenced</div>
+        <div class="cli-command">midi-cli-rs generate --notes "C4:0.5:80,D4:0.5:70,E4:0.5:80,F4:0.5:70,G4:1:90,E4:0.5:80,C4:1:100" -i piano -t 100 -o 02-simple-melody.wav</div>
+        <audio controls src="02-simple-melody.wav"></audio>
+    </div>
+
+    <div class="sample">
+        <h3>3. Low Drone</h3>
+        <div class="description">Cello drone - useful for suspense backgrounds</div>
+        <div class="cli-command">midi-cli-rs generate --notes "C2:4:60,G2:4:50@0" -i cello -t 60 -o 03-low-drone.wav</div>
+        <audio controls src="03-low-drone.wav"></audio>
+    </div>
+
+    <div class="sample">
+        <h3>4. String Pad</h3>
+        <div class="description">Sustained string chord - ambient texture</div>
+        <div class="cli-command">midi-cli-rs generate --notes "C3:4:50,E3:4:50@0,G3:4:50@0,C4:4:40@0" -i strings -t 60 -o 04-string-pad.wav</div>
+        <audio controls src="04-string-pad.wav"></audio>
+    </div>
+
+    <div class="sample">
+        <h3>5. Upbeat Rhythm</h3>
+        <div class="description">Fast tempo, energetic pattern</div>
+        <div class="cli-command">midi-cli-rs generate --notes "C4:0.25:90@0,C4:0.25:70@0.5,E4:0.25:90@1,..." -i piano -t 140 -o 05-upbeat-rhythm.wav</div>
+        <audio controls src="05-upbeat-rhythm.wav"></audio>
+    </div>
+
+    <div class="sample">
+        <h3>6. Bass Line</h3>
+        <div class="description">Electric bass pattern - foundation layer</div>
+        <div class="cli-command">midi-cli-rs generate --notes "C2:1:100@0,G2:0.5:80@1,C2:0.5:90@1.5,E2:1:100@2,G2:1:80@3" -i bass -t 100 -o 06-bass-line.wav</div>
+        <audio controls src="06-bass-line.wav"></audio>
+    </div>
+
+    <div class="sample">
+        <h3>7. Bells/Chimes</h3>
+        <div class="description">Vibraphone - ethereal, ambient accent</div>
+        <div class="cli-command">midi-cli-rs generate --notes "C5:2:60@0,E5:2:50@1,G5:2:50@2,C6:3:40@3" -i vibraphone -t 80 -o 07-bells.wav</div>
+        <audio controls src="07-bells.wav"></audio>
+    </div>
+
+    <div class="sample">
+        <h3>8. Minor Key (Eerie)</h3>
+        <div class="description">A minor chord - darker mood</div>
+        <div class="cli-command">midi-cli-rs generate --notes "A3:2:50,C4:2:50@0,E4:2:40@0,A4:4:30@2" -i strings -t 50 -o 08-minor-eerie.wav</div>
+        <audio controls src="08-minor-eerie.wav"></audio>
+    </div>
+
+    <div class="sample">
+        <h3>9. JSON Input Demo</h3>
+        <div class="description">Complex sequence via JSON stdin</div>
+        <div class="cli-command">echo '{"tempo":90,"instrument":"piano","notes":[{"pitch":"C4","duration":0.5,"velocity":80,"offset":0},...]}' | midi-cli-rs generate --json -o 09-json-demo.wav</div>
+        <audio controls src="09-json-demo.wav"></audio>
+    </div>
+
+    <div class="sample">
+        <h3>10. Flute Melody</h3>
+        <div class="description">Woodwind melody line</div>
+        <div class="cli-command">midi-cli-rs generate --notes "G5:0.5:70,A5:0.5:75,B5:0.5:80,C6:1:85,B5:0.5:75,A5:0.5:70,G5:1:80" -i flute -t 88 -o 10-flute-melody.wav</div>
+        <audio controls src="10-flute-melody.wav"></audio>
+    </div>
+
+    <div class="info">
+        <h2>Note Format</h2>
+        <p><code>PITCH:DURATION:VELOCITY[@OFFSET]</code></p>
+        <ul>
+            <li><strong>PITCH</strong>: Note name + octave (C4, F#3, Bb5)</li>
+            <li><strong>DURATION</strong>: Length in beats (1.0 = quarter note)</li>
+            <li><strong>VELOCITY</strong>: Volume 0-127</li>
+            <li><strong>OFFSET</strong>: Start time in beats (optional, default 0)</li>
+        </ul>
+        <p>Examples: <code>C4:1:80</code> | <code>F#3:0.5:100@2</code> | <code>Bb5:2:60@0</code></p>
+    </div>
+
+    <div class="info">
+        <h2>Combining Tracks with External Tools</h2>
+        <p>Generate separate instrument tracks, then combine with ffmpeg:</p>
+        <div class="usage-examples">
+# Generate individual tracks
+midi-cli-rs generate --notes "..." -i strings -o strings.wav
+midi-cli-rs generate --notes "..." -i piano -o piano.wav
+midi-cli-rs generate --notes "..." -i bass -o bass.wav
+
+# Mix with ffmpeg
+ffmpeg -i strings.wav -i piano.wav -i bass.wav \
+    -filter_complex amix=inputs=3:duration=longest \
+    -o mixed.wav</div>
+    </div>
+
+</body>
+</html>

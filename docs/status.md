@@ -4,20 +4,20 @@
 
 ## Current Phase
 
-**Phase 0: Documentation and Design** - COMPLETE
+**Phase 1: Core Implementation** - COMPLETE
 
 ## Overall Progress
 
 ```
-[##--------] 20% Complete
+[########--] 80% Complete
 ```
 
 | Phase | Status | Progress |
 |-------|--------|----------|
 | Phase 0: Documentation | Complete | 100% |
-| Phase 1: Core MIDI Generation | Not Started | 0% |
-| Phase 2: CLI Interface | Not Started | 0% |
-| Phase 3: WAV Rendering | Not Started | 0% |
+| Phase 1: Core MIDI Generation | Complete | 100% |
+| Phase 2: CLI Interface | Complete | 100% |
+| Phase 3: WAV Rendering | Complete | 100% |
 | Phase 4: Mood Presets | Not Started | 0% |
 | Phase 5: Polish | Not Started | 0% |
 
@@ -30,97 +30,121 @@
 - [x] Created docs/design.md - Detailed design decisions
 - [x] Created docs/plan.md - Implementation plan with phases
 - [x] Created docs/status.md - This file
-- [x] Initial project structure (Cargo.toml, src/main.rs)
 
-## In Progress
+### Phase 1-3: Core Implementation (2026-02-16)
 
-None - ready to begin Phase 1 implementation.
+- [x] Added dependencies (midly, clap, serde, thiserror, rand)
+- [x] Implemented Note struct with parsing ("C4:1:80" format)
+- [x] Implemented NoteSequence with instrument mapping
+- [x] Implemented MIDI file writer using midly crate
+- [x] Implemented CLI with clap (generate, render, instruments, info commands)
+- [x] Implemented FluidSynth integration for WAV rendering
+- [x] Created demo scripts (scripts/demo-generate.sh)
+- [x] Created preview directory with index.html and 10 sample WAVs
 
-## Blocked
+### Tests
 
-None.
+- 39 unit tests passing
+- Zero clippy warnings
+- Code formatted
 
-## Recent Decisions
+## Working CLI Commands
 
-### Licensing Strategy (2026-02-16)
+```bash
+# Generate MIDI from notes
+midi-cli-rs generate --notes "C4:1:80,E4:1:80,G4:1:80" -i piano -o output.mid
 
-**Decision**: Use only permissively-licensed dependencies and SoundFonts.
+# Generate WAV (includes MIDI + FluidSynth render)
+midi-cli-rs generate --notes "C4:1:80,E4:0.5:100@1" -i strings -o output.wav
 
-**Rationale**: Output audio must be commercially usable (YouTube monetization).
+# JSON input
+echo '{"tempo":120,"instrument":"piano","notes":[...]}' | midi-cli-rs generate --json -o out.wav
 
-**Key Points**:
-- All Rust crates: MIT/Apache-2.0 dual licensed
-- FluidSynth: LGPL-2.1 (OK for generated output)
-- SoundFonts: MIT licensed (FluidR3_GM, MuseScore_General)
+# List instruments
+midi-cli-rs instruments
 
-### FluidSynth Integration (2026-02-16)
+# Show MIDI file info
+midi-cli-rs info file.mid
 
-**Decision**: Use FluidSynth as external process, not library binding.
+# Render existing MIDI to WAV
+midi-cli-rs render -i input.mid -o output.wav
+```
 
-**Rationale**:
-- Simpler build (no C library linking)
-- Clearer LGPL license boundary
-- Easier cross-platform support
+## Demo Samples Generated
 
-### Input Format (2026-02-16)
+10 audio samples in `preview/` directory:
+1. C Major Chord (arpeggiated) - piano
+2. Simple melody - piano
+3. Low drone - cello
+4. String pad - strings
+5. Upbeat rhythm - piano
+6. Bass line - electric bass
+7. Bells/chimes - vibraphone
+8. Minor key (eerie) - strings
+9. JSON input demo - piano
+10. Flute melody - flute
 
-**Decision**: Support both CLI arguments and JSON stdin.
+Open `preview/index.html` in a browser to listen.
 
-**Rationale**: CLI args for simple cases, JSON for complex multi-track sequences.
+## Dependencies
 
-### Output Format (2026-02-16)
+### Rust Crates (all MIT/Apache-2.0)
 
-**Decision**: Support MIDI and WAV output, determined by file extension.
+| Crate | Purpose |
+|-------|---------|
+| midly | MIDI generation |
+| clap | CLI parsing |
+| serde/serde_json | JSON input |
+| thiserror | Error types |
+| rand | Randomization (for presets) |
+| tempfile | Test fixtures |
 
-**Rationale**: MIDI for flexibility, WAV for immediate playback.
+### External
+
+| Tool | Purpose | Status |
+|------|---------|--------|
+| FluidSynth | WAV rendering | Required for WAV output |
+| TimGM6mb.sf2 | SoundFont | Bundled in soundfonts/ |
 
 ## Next Steps
 
-### Immediate (Phase 1)
+### Phase 4: Mood Presets
 
-1. Add dependencies to Cargo.toml (midly, thiserror)
-2. Implement Note struct with parsing
-3. Implement NoteSequence struct
-4. Implement MIDI file writer
-5. Add unit tests
+1. Implement MoodGenerator trait
+2. Implement preset generators:
+   - Suspense (minor key, drones, tremolo)
+   - Eerie (sparse, dissonant, wide intervals)
+   - Upbeat (major key, rhythmic)
+   - Calm (sustained pads, arpeggios)
+   - Ambient (drones, textures)
+3. Add `preset` command
 
-### Short-term (Phases 2-3)
+### Phase 5: Polish
 
-1. Add CLI with clap
-2. Implement JSON input parsing
-3. Integrate FluidSynth for WAV rendering
-
-### Medium-term (Phase 4)
-
-1. Implement mood preset generators
-2. Add preset command
-
-## Risks and Concerns
-
-| Risk | Status | Mitigation |
-|------|--------|------------|
-| FluidSynth availability | Low | Clear error messages, optional feature |
-| Cross-platform compatibility | Medium | Test early on Linux and macOS |
-| MIDI complexity | Low | Using well-tested midly crate |
-
-## Metrics
-
-| Metric | Target | Current |
-|--------|--------|---------|
-| Test coverage | > 80% | N/A |
-| Clippy warnings | 0 | N/A |
-| Generation time (5s clip) | < 10ms | N/A |
-| Render time (5s clip) | < 500ms | N/A |
+1. Comprehensive error messages
+2. README with full documentation
+3. More test coverage
+4. Performance optimization
 
 ## Notes for AI Agents
 
-This project is designed to be used by AI coding agents. Key points:
+**Working Example**:
+```bash
+# Generate a 3-second piano intro
+midi-cli-rs generate \
+    --notes "C4:0.5:80@0,E4:0.5:80@0.5,G4:0.5:80@1,C5:1.5:90@1.5" \
+    --instrument piano \
+    --tempo 120 \
+    --output intro.wav
+```
 
-1. **Determinism**: Always use `--seed` for reproducible output
-2. **Single-instrument**: Output one instrument per invocation, layer with sox/ffmpeg
-3. **Error messages**: Formatted for easy parsing
-4. **Documentation**: Check `--help` for full command reference
+**Note Format**: `PITCH:DURATION:VELOCITY[@OFFSET]`
+- PITCH: C4, F#3, Bb5 (note name + octave)
+- DURATION: beats (1.0 = quarter note)
+- VELOCITY: 0-127
+- OFFSET: start time in beats (optional)
 
-## Contact
-
-Project maintained by Software Wrighter.
+**Combining Tracks**: Generate separate WAV files, combine with ffmpeg:
+```bash
+ffmpeg -i track1.wav -i track2.wav -filter_complex amix=inputs=2 combined.wav
+```
