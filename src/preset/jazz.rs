@@ -106,8 +106,30 @@ fn generate_walking_bass(
     let root = config.key.root();
     let mut notes = Vec::new();
 
-    // Chord tones for the key (in bass register - octave 2-3)
+    // Scale degrees relative to root (all notes that sound good in the key)
+    // For minor: natural minor with added chromatic approach notes
+    // For major: major scale with bebop passing tones
+    let scale_intervals: &[u8] = if config.key.is_minor() {
+        &[0, 2, 3, 5, 7, 8, 10, 12] // Natural minor scale
+    } else {
+        &[0, 2, 4, 5, 7, 9, 11, 12] // Major scale
+    };
+
+    // Build all valid bass notes in range (two octaves centered on bass root)
     let bass_root = root.saturating_sub(24).max(28); // Two octaves down, but not below E1
+    let mut scale_notes: Vec<u8> = Vec::new();
+    for octave_offset in [-12i8, 0, 12] {
+        for &interval in scale_intervals {
+            let note = (bass_root as i8 + octave_offset + interval as i8) as u8;
+            if note >= 28 && note <= bass_root + 14 {
+                scale_notes.push(note);
+            }
+        }
+    }
+    scale_notes.sort();
+    scale_notes.dedup();
+
+    // Chord tones (root, 3rd, 5th, 7th) - these are "strong" notes for downbeats
     let chord_tones: Vec<u8> = if config.key.is_minor() {
         vec![bass_root, bass_root + 3, bass_root + 7, bass_root + 10] // m7
     } else {
@@ -119,9 +141,25 @@ fn generate_walking_bass(
 
     // Determine step size and duration based on style
     let (step, base_duration) = match style {
-        BassStyle::Walking => (1.0, 0.95), // Slightly longer notes for legato feel
+        BassStyle::Walking => (1.0, 0.95),
         BassStyle::TwoFeel => (2.0, 1.9),
         BassStyle::Syncopated => (1.0, 0.8),
+    };
+
+    // Helper to find nearest scale note
+    let find_scale_step = |from: u8, direction: i8| -> u8 {
+        let idx = scale_notes.iter().position(|&n| n >= from).unwrap_or(0);
+        if direction > 0 {
+            // Moving up - get next note in scale
+            scale_notes.get(idx + 1).copied().unwrap_or(from)
+        } else {
+            // Moving down - get previous note in scale
+            if idx > 0 {
+                scale_notes[idx - 1]
+            } else {
+                from
+            }
+        }
     };
 
     while t < beats {
@@ -131,45 +169,72 @@ fn generate_walking_bass(
             continue;
         }
 
-        // Walking bass: stepwise motion with occasional leaps
+        // Walking bass: primarily scale-wise motion with occasional leaps to chord tones
         let pitch = if t == 0.0 {
             // Start on root
             bass_root
-        } else if rng.gen_bool(0.7) {
-            // Stepwise motion (scale degree up or down)
-            let step_dir = if rng.gen_bool(0.5) { 1i8 } else { -1 };
-            let step_size = if rng.gen_bool(0.7) { 2 } else { 1 }; // whole step or half step
-            let new_pitch = (last_pitch as i8 + step_dir * step_size) as u8;
-            new_pitch.clamp(bass_root.saturating_sub(5), bass_root + 12)
-        } else if rng.gen_bool(0.5) {
-            // Chord tone
+        } else if rng.gen_bool(0.65) {
+            // Scale-wise stepwise motion (follow the scale up or down)
+            let direction = if rng.gen_bool(0.5) { 1i8 } else { -1 };
+            find_scale_step(last_pitch, direction)
+        } else if rng.gen_bool(0.6) {
+            // Leap to a chord tone (sounds strong and anchored)
             chord_tones[rng.gen_range(0..chord_tones.len())]
         } else {
-            // Chromatic approach to next chord tone
+            // Chromatic approach (half step to a chord tone - classic jazz move)
             let target = chord_tones[rng.gen_range(0..chord_tones.len())];
             if rng.gen_bool(0.5) {
-                target.saturating_sub(1)
+                target.saturating_sub(1).max(28)
             } else {
                 target.saturating_add(1).min(bass_root + 12)
             }
         };
 
-        // Strong, consistent velocity for walking bass (prominent in mix)
+        // Strong velocity with jazzy dynamic variation
         let vel_base = 95 + (config.intensity as i32 / 10) as u8;
-        let velocity = variation.adjust_velocity(vel_base).saturating_add(rng.gen_range(0..10));
+        // Accent beat 1 and 3 more, beats 2 and 4 slightly softer for groove
+        let beat_num = t as i32 % 4;
+        let accent = if beat_num == 0 || beat_num == 2 { 5 } else { -3i8 as u8 };
+        let velocity = variation
+            .adjust_velocity(vel_base.saturating_add(accent))
+            .saturating_add(rng.gen_range(0..8))
+            .min(127);
+
+        // Swing timing: slightly delay offbeat notes for swing feel
+        let swing_offset = if (t * 2.0) as i32 % 2 == 1 {
+            rng.gen_range(0.02..0.08) // Swing the offbeats
+        } else {
+            rng.gen_range(-0.02..0.02) // Slight humanization on downbeats
+        };
+        let actual_time = (t + swing_offset).max(0.0);
 
         // Duration with slight variation
         let duration: f64 = base_duration + rng.gen_range(-0.05..0.05);
 
-        notes.push(Note::new(pitch, duration.max(0.1), velocity.min(127), t));
+        // Occasional grace note slide into the main note (chromatic approach)
+        if rng.gen_bool(0.15) && actual_time > 0.1 {
+            let grace_pitch = if rng.gen_bool(0.5) {
+                pitch.saturating_sub(1)
+            } else {
+                pitch.saturating_add(1)
+            };
+            notes.push(Note::new(
+                grace_pitch,
+                0.08,
+                (velocity as i32 - 20).max(40) as u8,
+                actual_time - 0.08,
+            ));
+        }
+
+        notes.push(Note::new(pitch, duration.max(0.1), velocity, actual_time));
         last_pitch = pitch;
 
         // Ghost notes on upbeats for syncopated style
         if matches!(style, BassStyle::Syncopated) && rng.gen_bool(0.25) {
             let ghost_pitch = chord_tones[rng.gen_range(0..chord_tones.len())];
-            let ghost_time = t + 0.5;
+            let ghost_time = t + 0.5 + rng.gen_range(0.0..0.05); // Slight timing variation
             if ghost_time < beats {
-                notes.push(Note::new(ghost_pitch, 0.25, vel_base - 30, ghost_time));
+                notes.push(Note::new(ghost_pitch, 0.2, vel_base - 35, ghost_time));
             }
         }
 
