@@ -44,7 +44,7 @@ impl FormState {
             key: String::new(),
             intensity: 50,
             tempo: 90,
-            seed: 1,
+            seed: 0, // 0 = random (will generate actual seed on save)
         }
     }
 
@@ -61,6 +61,13 @@ impl FormState {
     }
 
     fn to_request(&self) -> PresetRequest {
+        // If seed is 0 (random), generate an actual random seed for reproducibility
+        let seed = if self.seed == 0 {
+            generate_random_seed()
+        } else {
+            self.seed
+        };
+
         PresetRequest {
             name: self.name.clone(),
             mood: self.mood.clone(),
@@ -72,9 +79,20 @@ impl FormState {
             },
             intensity: self.intensity,
             tempo: self.tempo,
-            seed: self.seed,
+            seed,
         }
     }
+}
+
+/// Generate a random seed using JavaScript's Math.random()
+fn generate_random_seed() -> i64 {
+    let window = web_sys::window().unwrap();
+    let crypto = window.crypto().unwrap();
+    let mut bytes = [0u8; 8];
+    crypto.get_random_values_with_u8_array(&mut bytes).unwrap();
+    // Use first 6 bytes for a reasonable seed range (positive i64)
+    let seed = i64::from_le_bytes(bytes) & 0x7FFF_FFFF_FFFF_FFFF;
+    seed.max(1) // Ensure non-zero
 }
 
 /// Preset editor form component.
