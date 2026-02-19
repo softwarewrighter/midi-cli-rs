@@ -1,0 +1,9 @@
+[build]
+target = "index.html"
+dist = "../static"
+
+[watch]
+watch = ["src", "index.html"]
+
+[serve]
+port = 8080

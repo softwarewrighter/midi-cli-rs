@@ -1,5 +1,14 @@
 /target
 
+# Generated audio files (web server output)
+/generated/
+
+# Static files (built WASM frontend)
+/static/
+
+# Web frontend build artifacts
+/web/dist/
+
 # SoundFont files (large, download separately)
 /soundfonts/*.sf2
 *.sf2

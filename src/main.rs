@@ -2,6 +2,9 @@
 //!
 //! Generate MIDI files and WAV audio from note specifications or mood presets.
 
+#[cfg(feature = "server")]
+mod server;
+
 use chrono::{DateTime, Utc};
 use clap::{Parser, Subcommand};
 use midi_cli_rs::{
@@ -202,6 +205,14 @@ enum Commands {
     Info {
         /// MIDI file to inspect
         file: PathBuf,
+    },
+
+    /// Start the web UI server (requires --features server)
+    #[cfg(feature = "server")]
+    Serve {
+        /// Port to listen on
+        #[arg(short, long, default_value = "3000")]
+        port: u16,
     },
 }
 
@@ -483,6 +494,13 @@ fn run(command: Commands) -> Result<(), Box<dyn std::error::Error>> {
                 println!("  Track {i}: {events} events");
             }
 
+            Ok(())
+        }
+
+        #[cfg(feature = "server")]
+        Commands::Serve { port } => {
+            let rt = tokio::runtime::Runtime::new()?;
+            rt.block_on(server::run_server(port))?;
             Ok(())
         }
     }
