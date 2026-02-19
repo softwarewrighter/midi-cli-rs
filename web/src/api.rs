@@ -3,10 +3,12 @@
 use gloo_net::http::Request;
 use serde::{Deserialize, Serialize};
 
-/// Base URL for API requests (same origin in production).
 const API_BASE: &str = "/api";
 
-/// A saved preset configuration.
+// ============================================================================
+// Preset types
+// ============================================================================
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SavedPreset {
     pub id: String,
@@ -21,7 +23,6 @@ pub struct SavedPreset {
     pub last_generated: Option<String>,
 }
 
-/// Request body for creating/updating a preset.
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct PresetRequest {
     pub name: String,
@@ -33,7 +34,84 @@ pub struct PresetRequest {
     pub seed: i64,
 }
 
-/// Response from generating audio.
+// ============================================================================
+// Melody types
+// ============================================================================
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct MelodyNote {
+    pub pitch: String,
+    pub duration: f64,
+    pub velocity: u8,
+}
+
+impl Default for MelodyNote {
+    fn default() -> Self {
+        Self {
+            pitch: "C4".to_string(),
+            duration: 1.0,
+            velocity: 80,
+        }
+    }
+}
+
+impl MelodyNote {
+    pub fn rest(duration: f64) -> Self {
+        Self {
+            pitch: "rest".to_string(),
+            duration,
+            velocity: 0,
+        }
+    }
+
+    pub fn is_rest(&self) -> bool {
+        self.pitch == "rest"
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SavedMelody {
+    pub id: String,
+    pub name: String,
+    pub notes: Vec<MelodyNote>,
+    pub key: String,
+    pub tempo: u16,
+    pub instrument: String,
+    pub attack: u8,
+    pub decay: u8,
+    pub created_at: String,
+    pub last_generated: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct MelodyRequest {
+    pub name: String,
+    pub notes: Vec<MelodyNote>,
+    pub key: String,
+    pub tempo: u16,
+    pub instrument: String,
+    pub attack: u8,
+    pub decay: u8,
+}
+
+impl Default for MelodyRequest {
+    fn default() -> Self {
+        Self {
+            name: String::new(),
+            notes: vec![MelodyNote::default()],
+            key: "C".to_string(),
+            tempo: 120,
+            instrument: "piano".to_string(),
+            attack: 0,
+            decay: 64,
+        }
+    }
+}
+
+// ============================================================================
+// Common types
+// ============================================================================
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct GenerateResponse {
     pub preset_id: String,
@@ -41,19 +119,20 @@ pub struct GenerateResponse {
     pub generated_at: String,
 }
 
-/// Available mood preset info.
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct MoodInfo {
+pub struct InstrumentInfo {
     pub name: String,
-    pub key: String,
-    pub description: String,
+    pub program: u8,
 }
 
-/// API client for the midi-cli server.
+// ============================================================================
+// API Client
+// ============================================================================
+
 pub struct ApiClient;
 
 impl ApiClient {
-    /// Fetch all saved presets.
+    // Preset endpoints
     pub async fn list_presets() -> Result<Vec<SavedPreset>, String> {
         let response = Request::get(&format!("{}/presets", API_BASE))
             .send()
@@ -67,7 +146,6 @@ impl ApiClient {
         }
     }
 
-    /// Create a new preset.
     pub async fn create_preset(req: &PresetRequest) -> Result<SavedPreset, String> {
         let response = Request::post(&format!("{}/presets", API_BASE))
             .json(req)
@@ -83,7 +161,6 @@ impl ApiClient {
         }
     }
 
-    /// Update an existing preset.
     pub async fn update_preset(id: &str, req: &PresetRequest) -> Result<SavedPreset, String> {
         let response = Request::put(&format!("{}/presets/{}", API_BASE, id))
             .json(req)
@@ -99,7 +176,6 @@ impl ApiClient {
         }
     }
 
-    /// Delete a preset.
     pub async fn delete_preset(id: &str) -> Result<(), String> {
         let response = Request::delete(&format!("{}/presets/{}", API_BASE, id))
             .send()
@@ -113,8 +189,7 @@ impl ApiClient {
         }
     }
 
-    /// Generate audio for a preset.
-    pub async fn generate_audio(id: &str) -> Result<GenerateResponse, String> {
+    pub async fn generate_preset_audio(id: &str) -> Result<GenerateResponse, String> {
         let response = Request::post(&format!("{}/generate/{}", API_BASE, id))
             .send()
             .await
@@ -127,9 +202,9 @@ impl ApiClient {
         }
     }
 
-    /// Fetch available moods.
-    pub async fn list_moods() -> Result<Vec<MoodInfo>, String> {
-        let response = Request::get(&format!("{}/moods", API_BASE))
+    // Melody endpoints
+    pub async fn list_melodies() -> Result<Vec<SavedMelody>, String> {
+        let response = Request::get(&format!("{}/melodies", API_BASE))
             .send()
             .await
             .map_err(|e| e.to_string())?;
@@ -137,7 +212,76 @@ impl ApiClient {
         if response.ok() {
             response.json().await.map_err(|e| e.to_string())
         } else {
-            Err(format!("Failed to fetch moods: {}", response.status()))
+            Err(format!("Failed to fetch melodies: {}", response.status()))
+        }
+    }
+
+    pub async fn create_melody(req: &MelodyRequest) -> Result<SavedMelody, String> {
+        let response = Request::post(&format!("{}/melodies", API_BASE))
+            .json(req)
+            .map_err(|e| e.to_string())?
+            .send()
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if response.ok() {
+            response.json().await.map_err(|e| e.to_string())
+        } else {
+            Err(format!("Failed to create melody: {}", response.status()))
+        }
+    }
+
+    pub async fn update_melody(id: &str, req: &MelodyRequest) -> Result<SavedMelody, String> {
+        let response = Request::put(&format!("{}/melodies/{}", API_BASE, id))
+            .json(req)
+            .map_err(|e| e.to_string())?
+            .send()
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if response.ok() {
+            response.json().await.map_err(|e| e.to_string())
+        } else {
+            Err(format!("Failed to update melody: {}", response.status()))
+        }
+    }
+
+    pub async fn delete_melody(id: &str) -> Result<(), String> {
+        let response = Request::delete(&format!("{}/melodies/{}", API_BASE, id))
+            .send()
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if response.ok() || response.status() == 204 {
+            Ok(())
+        } else {
+            Err(format!("Failed to delete melody: {}", response.status()))
+        }
+    }
+
+    pub async fn generate_melody_audio(id: &str) -> Result<GenerateResponse, String> {
+        let response = Request::post(&format!("{}/melodies/{}/generate", API_BASE, id))
+            .send()
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if response.ok() {
+            response.json().await.map_err(|e| e.to_string())
+        } else {
+            Err(format!("Failed to generate audio: {}", response.status()))
+        }
+    }
+
+    pub async fn list_instruments() -> Result<Vec<InstrumentInfo>, String> {
+        let response = Request::get(&format!("{}/instruments", API_BASE))
+            .send()
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if response.ok() {
+            response.json().await.map_err(|e| e.to_string())
+        } else {
+            Err(format!("Failed to fetch instruments: {}", response.status()))
         }
     }
 }

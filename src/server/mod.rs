@@ -24,6 +24,7 @@ pub async fn run_server(port: u16) -> Result<(), Box<dyn std::error::Error>> {
 
     // Build the API routes
     let api_routes = Router::new()
+        // Preset routes
         .route("/presets", get(api::list_presets).post(api::create_preset))
         .route(
             "/presets/:id",
@@ -32,7 +33,17 @@ pub async fn run_server(port: u16) -> Result<(), Box<dyn std::error::Error>> {
                 .delete(api::delete_preset),
         )
         .route("/generate/:id", post(api::generate_audio))
-        .route("/moods", get(api::list_moods));
+        .route("/moods", get(api::list_moods))
+        // Melody routes
+        .route("/melodies", get(api::list_melodies).post(api::create_melody))
+        .route(
+            "/melodies/:id",
+            get(api::get_melody)
+                .put(api::update_melody)
+                .delete(api::delete_melody),
+        )
+        .route("/melodies/:id/generate", post(api::generate_melody_audio))
+        .route("/instruments", get(api::list_instruments));
 
     // CORS configuration for development
     let cors = CorsLayer::new()

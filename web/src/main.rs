@@ -3,57 +3,80 @@
 mod api;
 mod components;
 
-// Include generated version info
 mod version_info {
     include!(concat!(env!("OUT_DIR"), "/version_info.rs"));
 }
 
-use api::{ApiClient, PresetRequest, SavedPreset};
-use components::{PresetEditor, PresetList};
+use api::{ApiClient, MelodyRequest, PresetRequest, SavedMelody, SavedPreset};
+use components::{MelodyEditor, MelodyList, PresetEditor, PresetList};
 use std::collections::HashMap;
 use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
 
-/// Main application state.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Tab {
+    Presets,
+    Melodies,
+}
+
 #[derive(Default)]
 struct AppState {
+    active_tab: Option<Tab>,
+    // Presets
     presets: Vec<SavedPreset>,
-    editing: Option<SavedPreset>,
-    generating: Option<String>,
-    audio_urls: HashMap<String, String>,
+    editing_preset: Option<SavedPreset>,
+    generating_preset: Option<String>,
+    preset_audio_urls: HashMap<String, String>,
+    // Melodies
+    melodies: Vec<SavedMelody>,
+    editing_melody: Option<SavedMelody>,
+    generating_melody: Option<String>,
+    melody_audio_urls: HashMap<String, String>,
+    // Common
     error: Option<String>,
     loading: bool,
 }
 
-/// Application messages for state updates.
+impl AppState {
+    fn new() -> Self {
+        Self {
+            active_tab: Some(Tab::Presets),
+            loading: true,
+            ..Default::default()
+        }
+    }
+}
+
 enum Msg {
-    /// Load presets from the server.
+    // Tab
+    SwitchTab(Tab),
+    // Presets
     LoadPresets,
-    /// Presets loaded successfully.
     PresetsLoaded(Vec<SavedPreset>),
-    /// Start editing a preset.
     EditPreset(SavedPreset),
-    /// Clear the editor (cancel editing).
-    ClearEditor,
-    /// Save a new or updated preset.
+    ClearPresetEditor,
     SavePreset(PresetRequest),
-    /// Preset saved successfully.
     PresetSaved(SavedPreset),
-    /// Delete a preset.
     DeletePreset(String),
-    /// Preset deleted successfully.
     PresetDeleted(String),
-    /// Generate audio for a preset.
-    GenerateAudio(String),
-    /// Audio generation completed.
-    GenerationComplete(String, String),
-    /// An error occurred.
+    GeneratePresetAudio(String),
+    PresetGenerationComplete(String, String),
+    // Melodies
+    LoadMelodies,
+    MelodiesLoaded(Vec<SavedMelody>),
+    EditMelody(SavedMelody),
+    ClearMelodyEditor,
+    SaveMelody(MelodyRequest),
+    MelodySaved(SavedMelody),
+    DeleteMelody(String),
+    MelodyDeleted(String),
+    GenerateMelodyAudio(String),
+    MelodyGenerationComplete(String, String),
+    // Common
     Error(String),
-    /// Clear the error message.
     ClearError,
 }
 
-/// Main application component.
 struct App {
     state: AppState,
 }
@@ -63,20 +86,22 @@ impl Component for App {
     type Properties = ();
 
     fn create(ctx: &Context<Self>) -> Self {
-        // Load presets on startup
         ctx.link().send_message(Msg::LoadPresets);
+        ctx.link().send_message(Msg::LoadMelodies);
         Self {
-            state: AppState {
-                loading: true,
-                ..Default::default()
-            },
+            state: AppState::new(),
         }
     }
 
     fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
+            Msg::SwitchTab(tab) => {
+                self.state.active_tab = Some(tab);
+                true
+            }
+
+            // Preset handlers
             Msg::LoadPresets => {
-                self.state.loading = true;
                 let link = ctx.link().clone();
                 spawn_local(async move {
                     match ApiClient::list_presets().await {
@@ -86,34 +111,28 @@ impl Component for App {
                 });
                 true
             }
-
             Msg::PresetsLoaded(presets) => {
                 self.state.presets = presets;
                 self.state.loading = false;
                 true
             }
-
             Msg::EditPreset(preset) => {
-                self.state.editing = Some(preset);
+                self.state.editing_preset = Some(preset);
                 true
             }
-
-            Msg::ClearEditor => {
-                self.state.editing = None;
+            Msg::ClearPresetEditor => {
+                self.state.editing_preset = None;
                 true
             }
-
             Msg::SavePreset(req) => {
                 let link = ctx.link().clone();
-                let editing_id = self.state.editing.as_ref().map(|p| p.id.clone());
-
+                let editing_id = self.state.editing_preset.as_ref().map(|p| p.id.clone());
                 spawn_local(async move {
                     let result = if let Some(id) = editing_id {
                         ApiClient::update_preset(&id, &req).await
                     } else {
                         ApiClient::create_preset(&req).await
                     };
-
                     match result {
                         Ok(preset) => link.send_message(Msg::PresetSaved(preset)),
                         Err(e) => link.send_message(Msg::Error(e)),
@@ -121,14 +140,11 @@ impl Component for App {
                 });
                 true
             }
-
-            Msg::PresetSaved(_preset) => {
-                self.state.editing = None;
-                // Reload presets to get fresh data
+            Msg::PresetSaved(_) => {
+                self.state.editing_preset = None;
                 ctx.link().send_message(Msg::LoadPresets);
                 true
             }
-
             Msg::DeletePreset(id) => {
                 let link = ctx.link().clone();
                 let id_clone = id.clone();
@@ -140,48 +156,131 @@ impl Component for App {
                 });
                 true
             }
-
             Msg::PresetDeleted(id) => {
                 self.state.presets.retain(|p| p.id != id);
-                self.state.audio_urls.remove(&id);
-                if self.state.editing.as_ref().is_some_and(|p| p.id == id) {
-                    self.state.editing = None;
+                self.state.preset_audio_urls.remove(&id);
+                if self.state.editing_preset.as_ref().is_some_and(|p| p.id == id) {
+                    self.state.editing_preset = None;
                 }
                 true
             }
-
-            Msg::GenerateAudio(id) => {
-                self.state.generating = Some(id.clone());
+            Msg::GeneratePresetAudio(id) => {
+                self.state.generating_preset = Some(id.clone());
                 let link = ctx.link().clone();
                 spawn_local(async move {
-                    match ApiClient::generate_audio(&id).await {
+                    match ApiClient::generate_preset_audio(&id).await {
                         Ok(response) => {
-                            link.send_message(Msg::GenerationComplete(id, response.audio_url))
+                            link.send_message(Msg::PresetGenerationComplete(id, response.audio_url))
                         }
                         Err(e) => {
                             link.send_message(Msg::Error(e));
-                            // Clear generating state even on error
-                            link.send_message(Msg::GenerationComplete(id, String::new()));
+                            link.send_message(Msg::PresetGenerationComplete(id, String::new()));
                         }
                     }
                 });
                 true
             }
-
-            Msg::GenerationComplete(id, audio_url) => {
-                self.state.generating = None;
+            Msg::PresetGenerationComplete(id, audio_url) => {
+                self.state.generating_preset = None;
                 if !audio_url.is_empty() {
-                    self.state.audio_urls.insert(id, audio_url);
+                    self.state.preset_audio_urls.insert(id, audio_url);
                 }
                 true
             }
 
+            // Melody handlers
+            Msg::LoadMelodies => {
+                let link = ctx.link().clone();
+                spawn_local(async move {
+                    match ApiClient::list_melodies().await {
+                        Ok(melodies) => link.send_message(Msg::MelodiesLoaded(melodies)),
+                        Err(e) => link.send_message(Msg::Error(e)),
+                    }
+                });
+                true
+            }
+            Msg::MelodiesLoaded(melodies) => {
+                self.state.melodies = melodies;
+                true
+            }
+            Msg::EditMelody(melody) => {
+                self.state.editing_melody = Some(melody);
+                true
+            }
+            Msg::ClearMelodyEditor => {
+                self.state.editing_melody = None;
+                true
+            }
+            Msg::SaveMelody(req) => {
+                let link = ctx.link().clone();
+                let editing_id = self.state.editing_melody.as_ref().map(|m| m.id.clone());
+                spawn_local(async move {
+                    let result = if let Some(id) = editing_id {
+                        ApiClient::update_melody(&id, &req).await
+                    } else {
+                        ApiClient::create_melody(&req).await
+                    };
+                    match result {
+                        Ok(melody) => link.send_message(Msg::MelodySaved(melody)),
+                        Err(e) => link.send_message(Msg::Error(e)),
+                    }
+                });
+                true
+            }
+            Msg::MelodySaved(_) => {
+                self.state.editing_melody = None;
+                ctx.link().send_message(Msg::LoadMelodies);
+                true
+            }
+            Msg::DeleteMelody(id) => {
+                let link = ctx.link().clone();
+                let id_clone = id.clone();
+                spawn_local(async move {
+                    match ApiClient::delete_melody(&id_clone).await {
+                        Ok(()) => link.send_message(Msg::MelodyDeleted(id_clone)),
+                        Err(e) => link.send_message(Msg::Error(e)),
+                    }
+                });
+                true
+            }
+            Msg::MelodyDeleted(id) => {
+                self.state.melodies.retain(|m| m.id != id);
+                self.state.melody_audio_urls.remove(&id);
+                if self.state.editing_melody.as_ref().is_some_and(|m| m.id == id) {
+                    self.state.editing_melody = None;
+                }
+                true
+            }
+            Msg::GenerateMelodyAudio(id) => {
+                self.state.generating_melody = Some(id.clone());
+                let link = ctx.link().clone();
+                spawn_local(async move {
+                    match ApiClient::generate_melody_audio(&id).await {
+                        Ok(response) => {
+                            link.send_message(Msg::MelodyGenerationComplete(id, response.audio_url))
+                        }
+                        Err(e) => {
+                            link.send_message(Msg::Error(e));
+                            link.send_message(Msg::MelodyGenerationComplete(id, String::new()));
+                        }
+                    }
+                });
+                true
+            }
+            Msg::MelodyGenerationComplete(id, audio_url) => {
+                self.state.generating_melody = None;
+                if !audio_url.is_empty() {
+                    self.state.melody_audio_urls.insert(id, audio_url);
+                }
+                true
+            }
+
+            // Common handlers
             Msg::Error(error) => {
                 self.state.error = Some(error);
                 self.state.loading = false;
                 true
             }
-
             Msg::ClearError => {
                 self.state.error = None;
                 true
@@ -190,16 +289,14 @@ impl Component for App {
     }
 
     fn view(&self, ctx: &Context<Self>) -> Html {
-        let on_save = ctx.link().callback(Msg::SavePreset);
-        let on_clear = ctx.link().callback(|_| Msg::ClearEditor);
-        let on_edit = ctx.link().callback(Msg::EditPreset);
-        let on_delete = ctx.link().callback(Msg::DeletePreset);
-        let on_generate = ctx.link().callback(Msg::GenerateAudio);
         let on_clear_error = ctx.link().callback(|_| Msg::ClearError);
+        let active_tab = self.state.active_tab.unwrap_or(Tab::Presets);
+
+        let on_tab_presets = ctx.link().callback(|_| Msg::SwitchTab(Tab::Presets));
+        let on_tab_melodies = ctx.link().callback(|_| Msg::SwitchTab(Tab::Melodies));
 
         html! {
             <>
-                // GitHub corner octocat
                 <a href={version_info::REPO_URL} class="github-corner" aria-label="View source on GitHub" target="_blank" rel="noopener">
                     <svg viewBox="0 0 250 250" aria-hidden="true">
                         <path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path>
@@ -212,8 +309,23 @@ impl Component for App {
                     <header>
                         <h1>{"midi-cli-rs"}</h1>
                         <span class="separator">{"|"}</span>
-                        <span class="subtitle">{"AI Music Preset Manager"}</span>
+                        <span class="subtitle">{"AI Music Studio"}</span>
                     </header>
+
+                    <div class="tabs">
+                        <button
+                            class={if active_tab == Tab::Presets { "tab active" } else { "tab" }}
+                            onclick={on_tab_presets}
+                        >
+                            {"Presets"}
+                        </button>
+                        <button
+                            class={if active_tab == Tab::Melodies { "tab active" } else { "tab" }}
+                            onclick={on_tab_melodies}
+                        >
+                            {"Melodies"}
+                        </button>
+                    </div>
 
                     { if let Some(ref error) = self.state.error {
                         html! {
@@ -226,22 +338,10 @@ impl Component for App {
                         html! {}
                     }}
 
-                    <main class="main-content">
-                        <PresetEditor
-                            on_save={on_save}
-                            editing={self.state.editing.clone()}
-                            on_clear={on_clear}
-                        />
-
-                        <PresetList
-                            presets={self.state.presets.clone()}
-                            on_edit={on_edit}
-                            on_delete={on_delete}
-                            on_generate={on_generate}
-                            generating={self.state.generating.clone()}
-                            audio_urls={self.state.audio_urls.clone()}
-                        />
-                    </main>
+                    { match active_tab {
+                        Tab::Presets => self.view_presets_tab(ctx),
+                        Tab::Melodies => self.view_melodies_tab(ctx),
+                    }}
                 </div>
 
                 <footer>
@@ -258,13 +358,67 @@ impl Component for App {
                                 {format!("v{} ({}) built {}",
                                     version_info::VERSION,
                                     version_info::GIT_COMMIT_SHORT,
-                                    &version_info::BUILD_TIME[..10]  // Just the date
+                                    &version_info::BUILD_TIME[..10]
                                 )}
                             </span>
                         </div>
                     </div>
                 </footer>
             </>
+        }
+    }
+}
+
+impl App {
+    fn view_presets_tab(&self, ctx: &Context<Self>) -> Html {
+        let on_save = ctx.link().callback(Msg::SavePreset);
+        let on_clear = ctx.link().callback(|_| Msg::ClearPresetEditor);
+        let on_edit = ctx.link().callback(Msg::EditPreset);
+        let on_delete = ctx.link().callback(Msg::DeletePreset);
+        let on_generate = ctx.link().callback(Msg::GeneratePresetAudio);
+
+        html! {
+            <main class="main-content">
+                <PresetEditor
+                    on_save={on_save}
+                    editing={self.state.editing_preset.clone()}
+                    on_clear={on_clear}
+                />
+                <PresetList
+                    presets={self.state.presets.clone()}
+                    on_edit={on_edit}
+                    on_delete={on_delete}
+                    on_generate={on_generate}
+                    generating={self.state.generating_preset.clone()}
+                    audio_urls={self.state.preset_audio_urls.clone()}
+                />
+            </main>
+        }
+    }
+
+    fn view_melodies_tab(&self, ctx: &Context<Self>) -> Html {
+        let on_save = ctx.link().callback(Msg::SaveMelody);
+        let on_clear = ctx.link().callback(|_| Msg::ClearMelodyEditor);
+        let on_edit = ctx.link().callback(Msg::EditMelody);
+        let on_delete = ctx.link().callback(Msg::DeleteMelody);
+        let on_generate = ctx.link().callback(Msg::GenerateMelodyAudio);
+
+        html! {
+            <main class="main-content">
+                <MelodyEditor
+                    on_save={on_save}
+                    editing={self.state.editing_melody.clone()}
+                    on_clear={on_clear}
+                />
+                <MelodyList
+                    melodies={self.state.melodies.clone()}
+                    on_edit={on_edit}
+                    on_delete={on_delete}
+                    on_generate={on_generate}
+                    generating={self.state.generating_melody.clone()}
+                    audio_urls={self.state.melody_audio_urls.clone()}
+                />
+            </main>
         }
     }
 }

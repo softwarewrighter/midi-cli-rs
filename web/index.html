@@ -345,6 +345,151 @@
             padding: 2rem;
             color: var(--text-muted);
         }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .tab {
+            padding: 0.75rem 1.5rem;
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            color: var(--text-muted);
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .tab:hover {
+            color: var(--text);
+        }
+
+        .tab.active {
+            color: var(--highlight);
+            border-bottom-color: var(--highlight);
+        }
+
+        /* Melody Editor */
+        .melody-editor {
+            outline: none;
+        }
+
+        .melody-editor:focus {
+            border-color: var(--highlight);
+        }
+
+        .keyboard-hint {
+            background: var(--accent);
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .keyboard-hint kbd {
+            background: var(--bg-color);
+            padding: 0.1rem 0.4rem;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.7rem;
+            border: 1px solid var(--border);
+        }
+
+        .note-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            padding: 1rem;
+            background: var(--accent);
+            border-radius: 8px;
+            min-height: 80px;
+        }
+
+        .note-cell {
+            position: relative;
+            width: 60px;
+            height: 60px;
+            background: var(--card-bg);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            overflow: hidden;
+        }
+
+        .note-cell:hover {
+            border-color: var(--text-muted);
+        }
+
+        .note-cell.selected {
+            border-color: var(--highlight);
+            box-shadow: 0 0 0 2px rgba(233, 69, 96, 0.3);
+        }
+
+        .note-cell.insert-mode {
+            border-color: var(--success);
+            box-shadow: 0 0 0 2px rgba(78, 204, 163, 0.3);
+        }
+
+        .note-pitch {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .note-duration {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+
+        .note-velocity-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 3px;
+            background: var(--highlight);
+            transition: width 0.15s ease;
+        }
+
+        .insert-mode-indicator {
+            background: var(--success);
+            color: var(--bg-color);
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: inline-block;
+            margin-bottom: 1rem;
+        }
+
+        .melody-notes-preview {
+            font-family: monospace;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+            padding: 0.25rem 0.5rem;
+            background: var(--bg-color);
+            border-radius: 4px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Three column form row for melody settings */
+        .form-row:has(.form-group:nth-child(3)) {
+            grid-template-columns: 1fr 1fr 1fr;
+        }
     </style>
 </head>
 <body>
