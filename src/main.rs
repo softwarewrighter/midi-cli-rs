@@ -315,7 +315,8 @@ fn run(command: Commands) -> Result<(), Box<dyn std::error::Error>> {
 
             // Render to WAV if requested
             if ext == "wav" {
-                render_wav(&midi_path, &output, soundfont.as_ref())?;
+                // For manual note generation, don't trim (let notes decay naturally)
+                render_wav(&midi_path, &output, soundfont.as_ref(), None)?;
                 eprintln!("Rendered WAV: {}", output.display());
             }
 
@@ -419,7 +420,8 @@ fn run(command: Commands) -> Result<(), Box<dyn std::error::Error>> {
 
             // Render to WAV if requested
             if ext == "wav" {
-                render_wav(&midi_path, &output, soundfont.as_ref())?;
+                // Trim to requested duration with fade-out
+                render_wav(&midi_path, &output, soundfont.as_ref(), Some(duration))?;
                 eprintln!("Rendered WAV: {}", output.display());
             }
 
@@ -431,7 +433,8 @@ fn run(command: Commands) -> Result<(), Box<dyn std::error::Error>> {
             output,
             soundfont,
         } => {
-            render_wav(&input, &output, soundfont.as_ref())?;
+            // No target duration for render command - use full MIDI duration
+            render_wav(&input, &output, soundfont.as_ref(), None)?;
             eprintln!("Rendered WAV: {}", output.display());
             Ok(())
         }
@@ -511,6 +514,7 @@ fn render_wav(
     midi_path: &Path,
     wav_path: &Path,
     soundfont: Option<&PathBuf>,
+    target_duration: Option<f64>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     // Find FluidSynth
     let fluidsynth = find_fluidsynth()?;
@@ -520,6 +524,14 @@ fn render_wav(
         sf.to_path_buf()
     } else {
         find_soundfont()?
+    };
+
+    // Determine output path (use temp file if trimming needed)
+    let needs_trim = target_duration.is_some();
+    let render_path = if needs_trim {
+        wav_path.with_extension("tmp.wav")
+    } else {
+        wav_path.to_path_buf()
     };
 
     // Run FluidSynth
@@ -533,14 +545,44 @@ fn render_wav(
             "-r",
             "44100", // Sample rate
             "-F",
-            wav_path.to_str().unwrap(),  // Output WAV file
-            sf.to_str().unwrap(),        // SoundFont file
-            midi_path.to_str().unwrap(), // Input MIDI file
+            render_path.to_str().unwrap(), // Output WAV file
+            sf.to_str().unwrap(),          // SoundFont file
+            midi_path.to_str().unwrap(),   // Input MIDI file
         ])
         .status()?;
 
     if !status.success() {
         return Err(format!("FluidSynth failed with status: {status}").into());
+    }
+
+    // Trim to target duration if specified (removes reverb tail)
+    if let Some(duration) = target_duration {
+        let fade_duration = 0.5; // 500ms fade out for smooth ending
+        let trim_result = Command::new("ffmpeg")
+            .args([
+                "-y",                                      // Overwrite output
+                "-i", render_path.to_str().unwrap(),       // Input file
+                "-t", &format!("{:.2}", duration),         // Duration limit
+                "-af", &format!("afade=t=out:st={:.2}:d={:.2}", duration - fade_duration, fade_duration),
+                wav_path.to_str().unwrap(),                // Output file
+            ])
+            .output();
+
+        // Clean up temp file
+        let _ = std::fs::remove_file(&render_path);
+
+        match trim_result {
+            Ok(output) if output.status.success() => {}
+            Ok(output) => {
+                // ffmpeg failed, but we still have the untrimmed file
+                eprintln!("Warning: ffmpeg trim failed, using untrimmed audio");
+                eprintln!("{}", String::from_utf8_lossy(&output.stderr));
+            }
+            Err(_) => {
+                // ffmpeg not available, copy temp to final
+                eprintln!("Warning: ffmpeg not found, audio may be longer than requested");
+            }
+        }
     }
 
     Ok(())
