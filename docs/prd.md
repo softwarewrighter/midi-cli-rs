@@ -65,6 +65,8 @@ Built-in algorithmic generators for common moods:
 
 ### Future Features
 
+- **Multi-track melody composition**: Web UI support for composing melodies with multiple tracks/instruments that combine into a single output file
+- **Time signature control**: Support for 3/4 (waltz), 4/4 (standard), 6/8, and other time signatures
 - MIDI file input for transformation (reverse, invert, transpose)
 - Additional mood presets
 - Tempo/key modulation over time
