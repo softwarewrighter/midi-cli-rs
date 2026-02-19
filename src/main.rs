@@ -211,7 +211,7 @@ enum Commands {
     #[cfg(feature = "server")]
     Serve {
         /// Port to listen on
-        #[arg(short, long, default_value = "3000")]
+        #[arg(short, long, default_value = "3105")]
         port: u16,
     },
 }

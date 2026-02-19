@@ -1,6 +1,7 @@
 //! Melody editor component with keyboard-driven note editing.
 
 use crate::api::{MelodyNote, MelodyRequest, SavedMelody};
+use wasm_bindgen::JsCast;
 use web_sys::{HtmlInputElement, KeyboardEvent};
 use yew::prelude::*;
 
@@ -8,9 +9,28 @@ const KEYS: &[&str] = &[
     "C", "Cm", "D", "Dm", "Eb", "E", "Em", "F", "Fm", "G", "Gm", "A", "Am", "Bb", "B", "Bm",
 ];
 
-const INSTRUMENTS: &[&str] = &[
-    "piano", "electric_piano", "organ", "guitar", "bass", "strings", "synth_lead", "synth_pad",
-    "flute", "clarinet", "saxophone", "trumpet", "trombone", "violin", "cello", "vibraphone",
+const INSTRUMENTS: &[(&str, u8)] = &[
+    // (name, default_octave)
+    ("piano", 4),
+    ("electric_piano", 4),
+    ("organ", 4),
+    ("guitar", 3),
+    ("bass", 2),
+    ("electric_bass", 2),
+    ("contrabass", 2),
+    ("strings", 4),
+    ("synth_lead", 4),
+    ("synth_pad", 3),
+    ("flute", 5),
+    ("clarinet", 4),
+    ("saxophone", 3),
+    ("trumpet", 4),
+    ("trombone", 3),
+    ("violin", 4),
+    ("cello", 3),
+    ("vibraphone", 4),
+    ("tuba", 2),
+    ("bassoon", 2),
 ];
 
 const DURATIONS: &[(f64, &str)] = &[
@@ -48,12 +68,18 @@ struct EditorState {
 
 impl Default for EditorState {
     fn default() -> Self {
+        let instrument = "piano".to_string();
+        let octave = default_octave_for_instrument(&instrument);
         Self {
             name: String::new(),
-            notes: vec![MelodyNote::default()],
+            notes: vec![MelodyNote {
+                pitch: format!("C{}", octave),
+                duration: 1.0,
+                velocity: 80,
+            }],
             key: "C".to_string(),
             tempo: 120,
-            instrument: "piano".to_string(),
+            instrument,
             attack: 0,
             decay: 64,
             selected_note: 0,
@@ -65,11 +91,26 @@ impl Default for EditorState {
 }
 
 impl EditorState {
+    /// Create a new note with the appropriate octave for the current instrument.
+    fn new_note(&self) -> MelodyNote {
+        let octave = default_octave_for_instrument(&self.instrument);
+        MelodyNote {
+            pitch: format!("C{}", octave),
+            duration: 1.0,
+            velocity: 80,
+        }
+    }
+
     fn from_melody(melody: &SavedMelody) -> Self {
+        let octave = default_octave_for_instrument(&melody.instrument);
         Self {
             name: melody.name.clone(),
             notes: if melody.notes.is_empty() {
-                vec![MelodyNote::default()]
+                vec![MelodyNote {
+                    pitch: format!("C{}", octave),
+                    duration: 1.0,
+                    velocity: 80,
+                }]
             } else {
                 melody.notes.clone()
             },
@@ -132,6 +173,7 @@ pub fn melody_editor(props: &MelodyEditorProps) -> Html {
             .map(EditorState::from_melody)
             .unwrap_or_default()
     });
+    let note_grid_focused = use_state(|| false);
 
     // Update state when editing prop changes
     {
@@ -150,6 +192,16 @@ pub fn melody_editor(props: &MelodyEditorProps) -> Html {
     let on_keydown = {
         let state = state.clone();
         Callback::from(move |e: KeyboardEvent| {
+            // Skip handling if event originated from an input or select element
+            if let Some(target) = e.target() {
+                if let Ok(element) = target.dyn_into::<web_sys::Element>() {
+                    let tag = element.tag_name().to_uppercase();
+                    if tag == "INPUT" || tag == "SELECT" || tag == "TEXTAREA" {
+                        return;
+                    }
+                }
+            }
+
             let key = e.key();
             let shift = e.shift_key();
             let ctrl = e.ctrl_key() || e.meta_key();
@@ -335,8 +387,18 @@ pub fn melody_editor(props: &MelodyEditorProps) -> Html {
                 "Enter" => {
                     e.prevent_default();
                     s.push_undo();
-                    s.notes.push(MelodyNote::default());
+                    s.notes.push(s.new_note());
                     s.selected_note = s.notes.len() - 1;
+                }
+
+                // Escape to blur/exit note editor
+                "Escape" => {
+                    e.prevent_default();
+                    if let Some(target) = e.target() {
+                        if let Ok(element) = target.dyn_into::<web_sys::HtmlElement>() {
+                            let _ = element.blur();
+                        }
+                    }
                 }
 
                 _ => {}
@@ -381,7 +443,23 @@ pub fn melody_editor(props: &MelodyEditorProps) -> Html {
         Callback::from(move |e: Event| {
             let select: web_sys::HtmlSelectElement = e.target_unchecked_into();
             let mut s = (*state).clone();
-            s.instrument = select.value();
+            let old_octave = default_octave_for_instrument(&s.instrument);
+            let new_instrument = select.value();
+            let new_octave = default_octave_for_instrument(&new_instrument);
+
+            // Transpose all notes to the new instrument's range
+            if old_octave != new_octave {
+                let shift = new_octave as i8 - old_octave as i8;
+                for note in &mut s.notes {
+                    if !note.is_rest() {
+                        let current_octave = extract_octave(&note.pitch) as i8;
+                        let target_octave = (current_octave + shift).clamp(0, 8) as u8;
+                        note.pitch = set_octave(&note.pitch, target_octave);
+                    }
+                }
+            }
+
+            s.instrument = new_instrument;
             state.set(s);
         })
     };
@@ -432,27 +510,71 @@ pub fn melody_editor(props: &MelodyEditorProps) -> Html {
         Callback::from(move |_| on_clear.emit(()))
     };
 
+    let on_grid_focus = {
+        let note_grid_focused = note_grid_focused.clone();
+        Callback::from(move |_: FocusEvent| {
+            note_grid_focused.set(true);
+        })
+    };
+
+    let on_grid_blur = {
+        let note_grid_focused = note_grid_focused.clone();
+        Callback::from(move |_: FocusEvent| {
+            note_grid_focused.set(false);
+        })
+    };
+
     let is_editing = props.editing.is_some();
+    let grid_focused = *note_grid_focused;
+
+    let grid_class = if grid_focused {
+        "note-grid note-grid-focused"
+    } else {
+        "note-grid"
+    };
 
     html! {
-        <div class="card melody-editor" onkeydown={on_keydown} tabindex="0">
+        <div class="card melody-editor">
             <h2>{ if is_editing { "Edit Melody" } else { "New Melody" } }</h2>
 
-            <div class="keyboard-hint">
-                <small>
-                    {"Keys: "}
-                    <kbd>{"a-g"}</kbd>{" note | "}
-                    <kbd>{"r"}</kbd>{" rest | "}
-                    <kbd>{"Tab"}</kbd>{" next | "}
-                    <kbd>{"+/-"}</kbd>{" octave | "}
-                    <kbd>{"[/]"}</kbd>{" duration | "}
-                    <kbd>{"↑↓"}</kbd>{" velocity | "}
-                    <kbd>{"Shift+↑↓"}</kbd>{" scale | "}
-                    <kbd>{"i"}</kbd>{" insert | "}
-                    <kbd>{"Del"}</kbd>{" delete | "}
-                    <kbd>{"Ctrl+Z/Y"}</kbd>{" undo/redo"}
-                </small>
-            </div>
+            { if grid_focused {
+                html! {
+                    <div class="mode-indicator mode-note-editing">
+                        {"NOTE EDITING MODE"}
+                        <small>{" — Press Esc to exit"}</small>
+                    </div>
+                }
+            } else {
+                html! {
+                    <div class="mode-indicator mode-form">
+                        {"FORM MODE"}
+                        <small>{" — Click notes to edit"}</small>
+                    </div>
+                }
+            }}
+
+            { if grid_focused {
+                html! {
+                    <div class="keyboard-hint">
+                        <small>
+                            {"Keys: "}
+                            <kbd>{"a-g"}</kbd>{" note | "}
+                            <kbd>{"r"}</kbd>{" rest | "}
+                            <kbd>{"Tab"}</kbd>{" next | "}
+                            <kbd>{"+/-"}</kbd>{" octave | "}
+                            <kbd>{"[/]"}</kbd>{" duration | "}
+                            <kbd>{"↑↓"}</kbd>{" velocity | "}
+                            <kbd>{"Shift+↑↓"}</kbd>{" scale | "}
+                            <kbd>{"i"}</kbd>{" insert | "}
+                            <kbd>{"Del"}</kbd>{" delete | "}
+                            <kbd>{"Ctrl+Z/Y"}</kbd>{" undo/redo | "}
+                            <kbd>{"Esc"}</kbd>{" exit"}
+                        </small>
+                    </div>
+                }
+            } else {
+                html! {}
+            }}
 
             <form onsubmit={on_submit}>
                 <div class="form-group">
@@ -467,7 +589,13 @@ pub fn melody_editor(props: &MelodyEditorProps) -> Html {
                     />
                 </div>
 
-                <div class="note-grid">
+                <div
+                    class={grid_class}
+                    tabindex="0"
+                    onkeydown={on_keydown}
+                    onfocus={on_grid_focus}
+                    onblur={on_grid_blur}
+                >
                     { for state.notes.iter().enumerate().map(|(idx, note)| {
                         let selected = idx == state.selected_note;
                         let class = if selected {
@@ -514,8 +642,8 @@ pub fn melody_editor(props: &MelodyEditorProps) -> Html {
                     <div class="form-group">
                         <label for="melody-instrument">{"Instrument"}</label>
                         <select id="melody-instrument" onchange={on_instrument_change} value={state.instrument.clone()}>
-                            { for INSTRUMENTS.iter().map(|i| html! {
-                                <option value={*i} selected={state.instrument == *i}>{i}</option>
+                            { for INSTRUMENTS.iter().map(|(name, _)| html! {
+                                <option value={*name} selected={state.instrument == *name}>{name}</option>
                             })}
                         </select>
                     </div>
@@ -637,4 +765,14 @@ fn move_scale_step(pitch: &str, steps: i32, _key: &str) -> String {
     let new_octave = (octave as i32 + octave_adjust).clamp(0, 8) as u8;
 
     format!("{}{}", note_names[new_idx as usize], new_octave)
+}
+
+/// Get the default octave for an instrument (bass instruments play lower).
+fn default_octave_for_instrument(instrument: &str) -> u8 {
+    for (name, octave) in INSTRUMENTS {
+        if *name == instrument {
+            return *octave;
+        }
+    }
+    4 // default to middle octave
 }

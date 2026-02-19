@@ -125,11 +125,27 @@ pub struct InstrumentInfo {
     pub program: u8,
 }
 
+#[derive(Deserialize)]
+struct ErrorResponse {
+    error: String,
+}
+
 // ============================================================================
 // API Client
 // ============================================================================
 
 pub struct ApiClient;
+
+impl ApiClient {
+    /// Extract error message from response body, or fall back to status code
+    async fn extract_error(response: gloo_net::http::Response, context: &str) -> String {
+        let status = response.status();
+        match response.json::<ErrorResponse>().await {
+            Ok(err) => format!("{}: {}", context, err.error),
+            Err(_) => format!("{}: HTTP {}", context, status),
+        }
+    }
+}
 
 impl ApiClient {
     // Preset endpoints
@@ -157,7 +173,7 @@ impl ApiClient {
         if response.ok() {
             response.json().await.map_err(|e| e.to_string())
         } else {
-            Err(format!("Failed to create preset: {}", response.status()))
+            Err(Self::extract_error(response, "Failed to create preset").await)
         }
     }
 
@@ -172,7 +188,7 @@ impl ApiClient {
         if response.ok() {
             response.json().await.map_err(|e| e.to_string())
         } else {
-            Err(format!("Failed to update preset: {}", response.status()))
+            Err(Self::extract_error(response, "Failed to update preset").await)
         }
     }
 
@@ -198,7 +214,7 @@ impl ApiClient {
         if response.ok() {
             response.json().await.map_err(|e| e.to_string())
         } else {
-            Err(format!("Failed to generate audio: {}", response.status()))
+            Err(Self::extract_error(response, "Generate failed").await)
         }
     }
 
@@ -227,7 +243,7 @@ impl ApiClient {
         if response.ok() {
             response.json().await.map_err(|e| e.to_string())
         } else {
-            Err(format!("Failed to create melody: {}", response.status()))
+            Err(Self::extract_error(response, "Failed to create melody").await)
         }
     }
 
@@ -242,7 +258,7 @@ impl ApiClient {
         if response.ok() {
             response.json().await.map_err(|e| e.to_string())
         } else {
-            Err(format!("Failed to update melody: {}", response.status()))
+            Err(Self::extract_error(response, "Failed to update melody").await)
         }
     }
 
@@ -268,7 +284,7 @@ impl ApiClient {
         if response.ok() {
             response.json().await.map_err(|e| e.to_string())
         } else {
-            Err(format!("Failed to generate audio: {}", response.status()))
+            Err(Self::extract_error(response, "Generate failed").await)
         }
     }
 

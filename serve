@@ -1,0 +1,4 @@
+#!/bin/bash
+# Start the midi-cli-rs web UI server
+cd "$(dirname "$0")"
+exec ./target/release/midi-cli-rs serve "$@"

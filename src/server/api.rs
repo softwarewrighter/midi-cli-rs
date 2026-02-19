@@ -185,8 +185,12 @@ pub async fn generate_audio(
         cmd.arg("-k").arg(key);
     }
 
-    // Run generation
-    let status = cmd.status().map_err(|e| {
+    // Log the command being run
+    eprintln!("[API] Running preset generation: {:?}", cmd);
+
+    // Run generation and capture output
+    let output = cmd.output().map_err(|e| {
+        eprintln!("[API ERROR] Failed to spawn generator process: {}", e);
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(ErrorResponse {
@@ -195,14 +199,22 @@ pub async fn generate_audio(
         )
     })?;
 
-    if !status.success() {
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        eprintln!("[API ERROR] Preset generation failed:");
+        eprintln!("  Exit code: {:?}", output.status.code());
+        eprintln!("  Stdout: {}", stdout);
+        eprintln!("  Stderr: {}", stderr);
         return Err((
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(ErrorResponse {
-                error: "Audio generation failed".to_string(),
+                error: format!("Audio generation failed: {}", stderr.trim()),
             }),
         ));
     }
+
+    eprintln!("[API] Preset generation succeeded: {}", filename);
 
     // Update last_generated timestamp
     let generated_at = chrono::Utc::now().to_rfc3339();
@@ -384,16 +396,18 @@ pub async fn generate_melody_audio(
     let output_path = state.output_dir.join(&filename);
 
     // Convert notes to CLI format: "PITCH:DURATION:VELOCITY[@OFFSET],..."
+    // Rests are handled by advancing the offset without adding a note
     let mut notes_str = String::new();
     let mut offset = 0.0f64;
     for note in &melody.notes {
-        if !notes_str.is_empty() {
-            notes_str.push(',');
-        }
         if note.pitch == "rest" {
-            // For rests, just advance the offset
+            // For rests, just advance the offset (silence)
             offset += note.duration;
             continue;
+        }
+        // Only add comma separator if we already have notes
+        if !notes_str.is_empty() {
+            notes_str.push(',');
         }
         notes_str.push_str(&format!(
             "{}:{}:{}@{}",
@@ -423,8 +437,13 @@ pub async fn generate_melody_audio(
         .arg("-o")
         .arg(&output_path);
 
-    // Run generation
-    let status = cmd.status().map_err(|e| {
+    // Log the command being run
+    eprintln!("[API] Running melody generation: {:?}", cmd);
+    eprintln!("[API] Notes string: {}", notes_str);
+
+    // Run generation and capture output
+    let output = cmd.output().map_err(|e| {
+        eprintln!("[API ERROR] Failed to spawn generator process: {}", e);
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(ErrorResponse {
@@ -433,14 +452,22 @@ pub async fn generate_melody_audio(
         )
     })?;
 
-    if !status.success() {
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        eprintln!("[API ERROR] Melody generation failed:");
+        eprintln!("  Exit code: {:?}", output.status.code());
+        eprintln!("  Stdout: {}", stdout);
+        eprintln!("  Stderr: {}", stderr);
         return Err((
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(ErrorResponse {
-                error: "Audio generation failed".to_string(),
+                error: format!("Audio generation failed: {}", stderr.trim()),
             }),
         ));
     }
+
+    eprintln!("[API] Melody generation succeeded: {}", filename);
 
     // Update last_generated timestamp
     let generated_at = chrono::Utc::now().to_rfc3339();

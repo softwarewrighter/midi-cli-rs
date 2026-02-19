@@ -490,6 +490,58 @@
         .form-row:has(.form-group:nth-child(3)) {
             grid-template-columns: 1fr 1fr 1fr;
         }
+
+        /* Mode indicators */
+        .mode-indicator {
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .mode-indicator small {
+            font-weight: 400;
+            opacity: 0.8;
+        }
+
+        .mode-note-editing {
+            background: var(--highlight);
+            color: white;
+        }
+
+        .mode-form {
+            background: var(--accent);
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+        }
+
+        /* Note grid focus states */
+        .note-grid {
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .note-grid:not(.note-grid-focused) {
+            opacity: 0.7;
+        }
+
+        .note-grid-focused {
+            box-shadow: 0 0 0 3px rgba(233, 69, 96, 0.3);
+            border-color: var(--highlight);
+        }
+
+        .note-grid:not(.note-grid-focused) .note-cell {
+            cursor: pointer;
+        }
+
+        .note-grid:not(.note-grid-focused) .note-cell:hover {
+            border-color: var(--highlight);
+            opacity: 1;
+        }
     </style>
 </head>
 <body>
