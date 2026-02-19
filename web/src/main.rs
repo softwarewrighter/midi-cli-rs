@@ -140,7 +140,9 @@ impl Component for App {
                 });
                 true
             }
-            Msg::PresetSaved(_) => {
+            Msg::PresetSaved(preset) => {
+                // Clear audio URL - user must regenerate after edits
+                self.state.preset_audio_urls.remove(&preset.id);
                 self.state.editing_preset = None;
                 ctx.link().send_message(Msg::LoadPresets);
                 true
@@ -227,7 +229,9 @@ impl Component for App {
                 });
                 true
             }
-            Msg::MelodySaved(_) => {
+            Msg::MelodySaved(melody) => {
+                // Clear audio URL - user must regenerate after edits
+                self.state.melody_audio_urls.remove(&melody.id);
                 self.state.editing_melody = None;
                 ctx.link().send_message(Msg::LoadMelodies);
                 true

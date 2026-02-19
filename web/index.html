@@ -317,6 +317,29 @@
             width: 100%;
         }
 
+        .audio-player-disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            position: relative;
+        }
+
+        .audio-player-disabled audio {
+            pointer-events: none;
+        }
+
+        .audio-player-disabled::after {
+            content: "Click Generate after edits";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            background: var(--accent);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+        }
+
         .loading {
             display: inline-block;
             width: 20px;

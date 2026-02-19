@@ -105,7 +105,13 @@ pub fn preset_list(props: &PresetListProps) -> Html {
                             { if let Some(url) = audio_url {
                                 html! { <AudioPlayer src={url} /> }
                             } else {
-                                html! {}
+                                html! {
+                                    <div class="audio-player audio-player-disabled" title="Click Generate to create audio">
+                                        <audio controls=true disabled=true>
+                                            {"Audio not generated"}
+                                        </audio>
+                                    </div>
+                                }
                             }}
                         </div>
                     }
