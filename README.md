@@ -120,6 +120,32 @@ ffmpeg -i track1.wav -i track2.wav -filter_complex amix=inputs=2 combined.wav
 ffmpeg -i input.wav -af "afade=t=in:d=0.5,afade=t=out:st=4:d=1" faded.wav
 ```
 
+## Web UI
+
+A browser-based interface for creating and managing music presets and melodies.
+
+```bash
+# Build and run the web server
+cargo build --release --features server
+./serve  # Starts on http://127.0.0.1:3105
+```
+
+### Presets Tab
+Create mood-based compositions with adjustable parameters.
+
+![Presets Tab](images/screenshot-presets.png?ts=1771541845000)
+
+### Melodies Tab
+Compose note-by-note with keyboard shortcuts:
+- `a-g` - Set note pitch
+- `r` - Rest
+- `Tab` / `Shift+Tab` - Navigate notes
+- `[` / `]` - Adjust duration
+- `+` / `-` - Change octave
+- `Esc` - Exit note editing mode
+
+![Melodies Tab](images/screenshot-melodies.png?ts=1771541845000)
+
 ## Documentation
 
 | Document | Description |
