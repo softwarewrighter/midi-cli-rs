@@ -325,8 +325,9 @@ fn generate_piano_comping(
             rng.gen_range(0.8..1.2) // Sustained
         };
 
-        // Strong, audible piano (70-95 velocity range)
-        let vel_base = 75 + (config.intensity as i32 / 5) as u8;
+        // Piano comping sits well behind the bass (40-55 velocity range)
+        // Bass is ~100, piano should be noticeably quieter
+        let vel_base = 40 + (config.intensity as i32 / 10) as u8;
         let vel_base = variation.adjust_velocity(vel_base);
 
         for (i, &interval) in voicing.iter().enumerate() {
@@ -364,7 +365,7 @@ fn add_piano_flourish(
     let direction: i8 = if rng.gen_bool(0.5) { 1 } else { -1 };
     let num_notes = rng.gen_range(2..5);
 
-    let base_vel = 65;
+    let base_vel = 45; // Flourishes quieter than comping chords
 
     for i in 0..num_notes {
         let degree = (start_degree as i8 + direction * i as i8).rem_euclid(intervals.len() as i8) as usize;
