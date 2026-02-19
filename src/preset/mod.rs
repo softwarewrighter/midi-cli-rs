@@ -18,8 +18,99 @@ pub use suspense::SuspensePreset;
 pub use upbeat::UpbeatPreset;
 
 use crate::midi::sequence::NoteSequence;
+use rand::Rng;
 use rand::SeedableRng;
 use rand::rngs::StdRng;
+
+/// Centralized variation parameters generated from seed
+/// This ensures different seeds produce noticeably different outputs
+#[derive(Debug, Clone)]
+pub struct PresetVariation {
+    /// Tempo multiplier (0.85 to 1.15 = ±15%)
+    pub tempo_factor: f64,
+    /// Layer inclusion probabilities (0.0-1.0)
+    pub layer_probs: [f64; 6],
+    /// Instrument selection indices (0-255, mod by available instruments)
+    pub instrument_indices: [u8; 6],
+    /// Style variations (0-255)
+    pub style_choices: [u8; 6],
+    /// Density factor (0.5 to 1.5)
+    pub density_factor: f64,
+    /// Velocity base offset (-20 to +20)
+    pub velocity_offset: i8,
+    /// Note count multiplier (0.7 to 1.5)
+    pub note_count_factor: f64,
+}
+
+impl PresetVariation {
+    /// Generate variation parameters from seed
+    pub fn from_seed(seed: u64) -> Self {
+        let mut rng = StdRng::seed_from_u64(seed);
+
+        Self {
+            tempo_factor: 1.0 + (rng.gen_range(-15..=15) as f64 / 100.0),
+            layer_probs: [
+                rng.gen_range(0.3..1.0),
+                rng.gen_range(0.3..1.0),
+                rng.gen_range(0.2..0.9),
+                rng.gen_range(0.2..0.8),
+                rng.gen_range(0.1..0.7),
+                rng.gen_range(0.1..0.6),
+            ],
+            instrument_indices: [
+                rng.gen_range(0..=255),
+                rng.gen_range(0..=255),
+                rng.gen_range(0..=255),
+                rng.gen_range(0..=255),
+                rng.gen_range(0..=255),
+                rng.gen_range(0..=255),
+            ],
+            style_choices: [
+                rng.gen_range(0..=255),
+                rng.gen_range(0..=255),
+                rng.gen_range(0..=255),
+                rng.gen_range(0..=255),
+                rng.gen_range(0..=255),
+                rng.gen_range(0..=255),
+            ],
+            density_factor: rng.gen_range(0.6..1.4),
+            velocity_offset: rng.gen_range(-15..=15),
+            note_count_factor: rng.gen_range(0.7..1.4),
+        }
+    }
+
+    /// Get effective tempo given base tempo
+    pub fn effective_tempo(&self, base_tempo: u16) -> u16 {
+        ((base_tempo as f64 * self.tempo_factor) as u16).clamp(40, 200)
+    }
+
+    /// Check if a layer should be included (combines variation prob with intensity)
+    pub fn include_layer(&self, layer_idx: usize, intensity: u8, base_threshold: u8) -> bool {
+        let var_prob = self.layer_probs.get(layer_idx).copied().unwrap_or(0.5);
+        let intensity_factor = intensity as f64 / 100.0;
+        let threshold = base_threshold as f64 / 100.0;
+
+        // Layer included if: random variation says yes AND intensity is above adjusted threshold
+        var_prob > (1.0 - intensity_factor) && intensity >= (base_threshold as f64 * (1.0 - var_prob * 0.3)) as u8
+    }
+
+    /// Get instrument from a list using seeded index
+    pub fn pick_instrument(&self, layer_idx: usize, instruments: &[u8]) -> u8 {
+        let idx = self.instrument_indices.get(layer_idx).copied().unwrap_or(0) as usize;
+        instruments[idx % instruments.len()]
+    }
+
+    /// Get style choice (0-255) for a layer, mod by num_styles for actual choice
+    pub fn pick_style(&self, layer_idx: usize, num_styles: usize) -> usize {
+        let choice = self.style_choices.get(layer_idx).copied().unwrap_or(0) as usize;
+        choice % num_styles
+    }
+
+    /// Adjust velocity with variation offset
+    pub fn adjust_velocity(&self, base_vel: u8) -> u8 {
+        (base_vel as i16 + self.velocity_offset as i16).clamp(1, 127) as u8
+    }
+}
 
 /// Musical key for preset generation
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -288,5 +379,56 @@ mod tests {
                 assert_eq!(n1.duration, n2.duration);
             }
         }
+    }
+
+    #[test]
+    fn test_variation_from_seed_is_deterministic() {
+        let var1 = PresetVariation::from_seed(42);
+        let var2 = PresetVariation::from_seed(42);
+
+        assert_eq!(var1.tempo_factor, var2.tempo_factor);
+        assert_eq!(var1.instrument_indices, var2.instrument_indices);
+        assert_eq!(var1.style_choices, var2.style_choices);
+    }
+
+    #[test]
+    fn test_variation_differs_by_seed() {
+        let var42 = PresetVariation::from_seed(42);
+        let var43 = PresetVariation::from_seed(43);
+
+        // Adjacent seeds should produce different variations
+        let mut differences = 0;
+        if (var42.tempo_factor - var43.tempo_factor).abs() > 0.001 {
+            differences += 1;
+        }
+        if var42.instrument_indices != var43.instrument_indices {
+            differences += 1;
+        }
+        if var42.style_choices != var43.style_choices {
+            differences += 1;
+        }
+        if (var42.density_factor - var43.density_factor).abs() > 0.01 {
+            differences += 1;
+        }
+
+        assert!(
+            differences >= 2,
+            "Seeds 42 and 43 should produce different variations"
+        );
+    }
+
+    #[test]
+    fn test_effective_tempo_clamped() {
+        let var = PresetVariation::from_seed(999);
+        let tempo = var.effective_tempo(100);
+        assert!(tempo >= 40 && tempo <= 200);
+    }
+
+    #[test]
+    fn test_pick_instrument_wraps() {
+        let var = PresetVariation::from_seed(42);
+        let instruments = [0u8, 1, 2];
+        let picked = var.pick_instrument(0, &instruments);
+        assert!(instruments.contains(&picked));
     }
 }
