@@ -325,9 +325,9 @@ fn generate_piano_comping(
             rng.gen_range(0.8..1.2) // Sustained
         };
 
-        // Piano comping sits well behind the bass (40-55 velocity range)
-        // Bass is ~100, piano should be noticeably quieter
-        let vel_base = 40 + (config.intensity as i32 / 10) as u8;
+        // Piano comping sits well behind the bass (30-40 velocity range)
+        // Chords have 3-4 notes so cumulative volume is higher than single notes
+        let vel_base = 30 + (config.intensity as i32 / 12) as u8;
         let vel_base = variation.adjust_velocity(vel_base);
 
         for (i, &interval) in voicing.iter().enumerate() {
@@ -365,7 +365,7 @@ fn add_piano_flourish(
     let direction: i8 = if rng.gen_bool(0.5) { 1 } else { -1 };
     let num_notes = rng.gen_range(2..5);
 
-    let base_vel = 45; // Flourishes quieter than comping chords
+    let base_vel = 35; // Flourishes quieter than comping chords
 
     for i in 0..num_notes {
         let degree = (start_degree as i8 + direction * i as i8).rem_euclid(intervals.len() as i8) as usize;
@@ -395,37 +395,37 @@ fn generate_brush_drums(
 
     while t < beats {
         // Ride cymbal: main timekeeping (every beat)
-        // Low velocity for brush-like softness
-        let ride_vel = 45 + rng.gen_range(0..20);
+        // Ride cymbal - prominent in jazz trio
+        let ride_vel = 65 + rng.gen_range(0..20);
         notes.push(Note::new(DRUM_RIDE_CYMBAL, 0.2, ride_vel, t));
 
         // Swung "and" on ride (the skip beat)
         let and_time = t + swing_ratio;
         if and_time < beats && rng.gen_bool(0.85) {
-            let and_vel = 35 + rng.gen_range(0..15);
+            let and_vel = 55 + rng.gen_range(0..15);
             // Alternate between ride cymbal and ride bell for variation
             let ride_sound = if rng.gen_bool(0.8) { DRUM_RIDE_CYMBAL } else { DRUM_RIDE_BELL };
             notes.push(Note::new(ride_sound, 0.15, and_vel, and_time));
         }
 
-        // Hi-hat: soft pedal hits on beats 2 and 4
+        // Hi-hat: pedal hits on beats 2 and 4
         if (t as i32) % 2 == 1 {
-            let hh_vel = 30 + rng.gen_range(0..15);
+            let hh_vel = 50 + rng.gen_range(0..15);
             notes.push(Note::new(DRUM_PEDAL_HIHAT, 0.1, hh_vel, t));
         }
 
-        // Occasional soft closed hi-hat on offbeats
+        // Occasional closed hi-hat on offbeats
         if rng.gen_bool(0.2) {
             let offbeat_time = t + 0.5;
             if offbeat_time < beats {
-                notes.push(Note::new(DRUM_CLOSED_HIHAT, 0.08, 25 + rng.gen_range(0..10), offbeat_time));
+                notes.push(Note::new(DRUM_CLOSED_HIHAT, 0.08, 45 + rng.gen_range(0..10), offbeat_time));
             }
         }
 
-        // Snare brush swirl: gentle hits on 2 and 4 (classic jazz backbeat)
-        // Using side stick or very soft snare for brush effect
+        // Snare brush swirl: hits on 2 and 4 (classic jazz backbeat)
+        // Using side stick or soft snare for brush effect
         if (t as i32) % 2 == 1 && rng.gen_bool(0.7) {
-            let snare_vel = 35 + rng.gen_range(0..20); // Soft for brush feel
+            let snare_vel = 50 + rng.gen_range(0..20); // Brush feel
             let snare_sound = if rng.gen_bool(0.6) { DRUM_SIDE_STICK } else { DRUM_SNARE };
             notes.push(Note::new(snare_sound, 0.15, snare_vel, t));
         }
@@ -434,7 +434,7 @@ fn generate_brush_drums(
         if rng.gen_bool(0.1) {
             let swirl_time = t + rng.gen_range(0.2..0.4);
             if swirl_time < beats {
-                notes.push(Note::new(DRUM_BRUSH_SWIRL, 0.3, 20 + rng.gen_range(0..10), swirl_time));
+                notes.push(Note::new(DRUM_BRUSH_SWIRL, 0.3, 40 + rng.gen_range(0..10), swirl_time));
             }
         }
 
