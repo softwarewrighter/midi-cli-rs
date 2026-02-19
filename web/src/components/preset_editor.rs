@@ -317,11 +317,11 @@ pub fn preset_editor(props: &PresetEditorProps) -> Html {
                             />
                             <button
                                 type="button"
-                                class="btn-small btn-secondary seed-now-btn"
+                                class="btn-icon seed-now-btn"
                                 onclick={on_time_seed}
-                                title="Use current time as seed"
+                                title="Time-based seed"
                             >
-                                {"Now"}
+                                {"🕐"}
                             </button>
                         </div>
                     </div>
