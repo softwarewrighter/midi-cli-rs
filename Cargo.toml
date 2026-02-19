@@ -16,7 +16,7 @@ name = "midi-cli-rs"
 path = "src/main.rs"
 
 [features]
-default = []
+default = ["server"]
 server = ["axum", "tower", "tower-http", "tokio", "uuid"]
 
 [dependencies]

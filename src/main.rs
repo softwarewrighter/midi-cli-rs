@@ -207,7 +207,7 @@ enum Commands {
         file: PathBuf,
     },
 
-    /// Start the web UI server (requires --features server)
+    /// Start the web UI server for interactive preset creation
     #[cfg(feature = "server")]
     Serve {
         /// Port to listen on
