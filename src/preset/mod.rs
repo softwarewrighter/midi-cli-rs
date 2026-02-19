@@ -91,7 +91,7 @@ impl PresetVariation {
         let threshold = base_threshold as f64 / 100.0;
 
         // Layer included if: random variation says yes AND intensity is above adjusted threshold
-        var_prob > (1.0 - intensity_factor) && intensity >= (base_threshold as f64 * (1.0 - var_prob * 0.3)) as u8
+        var_prob > (1.0 - intensity_factor) && intensity as f64 / 100.0 >= (threshold * (1.0 - var_prob * 0.3))
     }
 
     /// Get instrument from a list using seeded index

@@ -288,7 +288,7 @@ fn generate_piano_comping(
 /// Generate ride cymbal pattern with swing
 fn generate_ride_pattern(
     config: &PresetConfig,
-    variation: &PresetVariation,
+    _variation: &PresetVariation,
     beats: f64,
     tempo: u16,
     rng: &mut impl Rng,
