@@ -10,8 +10,9 @@ use rand::Rng;
 /// Jazz mood generator - nightclub trio style
 pub struct JazzPreset;
 
-/// Bass instrument choices (acoustic bass preferred for jazz)
-const BASS_INSTRUMENTS: &[u8] = &[32, 32, 32, 33, 34]; // weighted toward acoustic bass
+/// Bass instrument: Acoustic Bass (GM 32) - plucked upright/double bass
+/// This is the standard jazz walking bass sound
+const BASS_INSTRUMENTS: &[u8] = &[32]; // Only acoustic bass for authentic jazz
 
 /// Piano/keys instrument choices (acoustic piano preferred)
 const KEYS_INSTRUMENTS: &[u8] = &[0, 0, 0, 1, 4]; // weighted toward acoustic grand
@@ -68,15 +69,19 @@ impl MoodGenerator for JazzPreset {
         let bass_inst = variation.pick_instrument(0, BASS_INSTRUMENTS);
         let keys_inst = variation.pick_instrument(1, KEYS_INSTRUMENTS);
 
-        // Layer 1: Walking Bass (always included, prominent)
-        sequences.push(generate_walking_bass(config, &variation, beats, effective_tempo, bass_inst, bass_style, &mut rng));
+        // Layer 1: Walking Bass on channel 1 (always included, prominent)
+        let mut bass_seq = generate_walking_bass(config, &variation, beats, effective_tempo, bass_inst, bass_style, &mut rng);
+        bass_seq.channel = 1; // Separate channel so bass instrument isn't overwritten
+        sequences.push(bass_seq);
 
-        // Layer 2: Piano comping with flourishes (almost always included)
+        // Layer 2: Piano comping on channel 0 (almost always included)
         if variation.layer_probs[1] > 0.05 {
-            sequences.push(generate_piano_comping(config, &variation, beats, effective_tempo, keys_inst, comp_style, &mut rng));
+            let mut piano_seq = generate_piano_comping(config, &variation, beats, effective_tempo, keys_inst, comp_style, &mut rng);
+            piano_seq.channel = 0;
+            sequences.push(piano_seq);
         }
 
-        // Layer 3: Brushed drums on channel 9 (ride + snare brush pattern)
+        // Layer 3: Brushed drums on channel 9 (GM drum channel)
         if variation.layer_probs[2] > 0.1 {
             sequences.push(generate_brush_drums(config, &variation, beats, effective_tempo, &mut rng));
         }
