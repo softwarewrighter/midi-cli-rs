@@ -2,7 +2,7 @@
 //!
 //! Characteristics: Minor key, low drones, tremolo strings, dissonance
 
-use super::{create_rng, MoodGenerator, PresetConfig};
+use super::{create_rng, MoodGenerator, PresetConfig, PresetVariation};
 use crate::midi::{Note, NoteSequence};
 use rand::Rng;
 
@@ -37,38 +37,36 @@ const HIT_INSTRUMENTS: &[u8] = &[
 
 impl MoodGenerator for SuspensePreset {
     fn generate(&self, config: &PresetConfig) -> Vec<NoteSequence> {
+        let variation = PresetVariation::from_seed(config.seed);
         let mut rng = create_rng(config.seed);
         let mut sequences = Vec::new();
 
-        // Tempo variation: ±10%
-        let tempo_var = 1.0 + (rng.gen_range(-10..=10) as f64 / 100.0);
-        let effective_tempo = ((config.tempo as f64 * tempo_var) as u16).max(40).min(120);
-
+        let effective_tempo = variation.effective_tempo(config.tempo);
         let beats = config.duration_secs * effective_tempo as f64 / 60.0;
 
-        // Choose instruments for this seed
-        let drone_inst = DRONE_INSTRUMENTS[rng.gen_range(0..DRONE_INSTRUMENTS.len())];
-        let tremolo_inst = TREMOLO_INSTRUMENTS[rng.gen_range(0..TREMOLO_INSTRUMENTS.len())];
-        let hit_inst = HIT_INSTRUMENTS[rng.gen_range(0..HIT_INSTRUMENTS.len())];
+        // Choose instruments using variation system
+        let drone_inst = variation.pick_instrument(0, DRONE_INSTRUMENTS);
+        let tremolo_inst = variation.pick_instrument(1, TREMOLO_INSTRUMENTS);
+        let hit_inst = variation.pick_instrument(2, HIT_INSTRUMENTS);
 
         // Layer 1: Low drone (always, but style varies)
-        sequences.push(generate_drone(config, beats, effective_tempo, drone_inst, &mut rng));
+        sequences.push(generate_drone(config, &variation, beats, effective_tempo, drone_inst, &mut rng));
 
         // Layer 2: High tremolo strings (probability + intensity based)
-        let tremolo_prob = 0.4 + (config.intensity as f64 / 200.0);
-        if rng.gen_bool(tremolo_prob) {
-            sequences.push(generate_tremolo(config, beats, effective_tempo, tremolo_inst, &mut rng));
+        let tremolo_threshold = 0.6 - config.intensity as f64 / 200.0;
+        if variation.layer_probs[1] > tremolo_threshold {
+            sequences.push(generate_tremolo(config, &variation, beats, effective_tempo, tremolo_inst, &mut rng));
         }
 
         // Layer 3: Sparse hits (probability + intensity based)
-        let hit_prob = 0.2 + (config.intensity as f64 / 150.0);
-        if rng.gen_bool(hit_prob) {
-            sequences.push(generate_sparse_hits(config, beats, effective_tempo, hit_inst, &mut rng));
+        let hit_threshold = 0.7 - config.intensity as f64 / 150.0;
+        if variation.layer_probs[2] > hit_threshold {
+            sequences.push(generate_sparse_hits(config, &variation, beats, effective_tempo, hit_inst, &mut rng));
         }
 
         // Layer 4: Sub-bass rumble (random chance)
-        if rng.gen_bool(0.3) {
-            sequences.push(generate_sub_bass(config, beats, effective_tempo, &mut rng));
+        if variation.layer_probs[3] > 0.6 {
+            sequences.push(generate_sub_bass(config, &variation, beats, effective_tempo, &mut rng));
         }
 
         sequences
@@ -86,6 +84,7 @@ impl MoodGenerator for SuspensePreset {
 /// Generate low sustained drone with variation
 fn generate_drone(
     config: &PresetConfig,
+    variation: &PresetVariation,
     beats: f64,
     tempo: u16,
     instrument: u8,
@@ -94,21 +93,21 @@ fn generate_drone(
     let root = config.key.root();
     let mut notes = Vec::new();
 
-    // Drone style varies
-    let style = rng.gen_range(0..4);
+    // Drone style varies based on seed
+    let style = variation.pick_style(0, 4);
 
     match style {
         0 => {
             // Simple sustained drone
             let fifth = root + 7;
-            notes.push(Note::new(root - 24, beats, 45 + rng.gen_range(0..15), 0.0));
-            notes.push(Note::new(fifth - 24, beats, 35 + rng.gen_range(0..15), 0.0));
+            notes.push(Note::new(root - 24, beats, variation.adjust_velocity(45 + rng.gen_range(0..15)), 0.0));
+            notes.push(Note::new(fifth - 24, beats, variation.adjust_velocity(35 + rng.gen_range(0..15)), 0.0));
         }
         1 => {
             // Pulsing drone
             let mut t = 0.0;
             while t < beats {
-                let vel = 40 + rng.gen_range(0..20);
+                let vel = variation.adjust_velocity(40 + rng.gen_range(0..20));
                 let dur: f64 = rng.gen_range(1.5..3.0);
                 notes.push(Note::new(root - 24, dur.min(beats - t), vel, t));
                 t += dur + rng.gen_range(0.0..0.5);
@@ -120,7 +119,7 @@ fn generate_drone(
             let mut current_octave = -24i8;
             while t < beats {
                 let pitch = (root as i8 + current_octave) as u8;
-                let vel = 40 + rng.gen_range(0..15);
+                let vel = variation.adjust_velocity(40 + rng.gen_range(0..15));
                 let dur: f64 = rng.gen_range(2.0_f64..4.0_f64).min(beats - t);
                 notes.push(Note::new(pitch, dur, vel, t));
                 t += dur;
@@ -133,8 +132,8 @@ fn generate_drone(
         _ => {
             // Tritone tension drone
             let tritone = root + 6;
-            notes.push(Note::new(root - 24, beats, 50 + rng.gen_range(0..10), 0.0));
-            notes.push(Note::new(tritone - 24, beats, 30 + rng.gen_range(0..10), 0.0));
+            notes.push(Note::new(root - 24, beats, variation.adjust_velocity(50 + rng.gen_range(0..10)), 0.0));
+            notes.push(Note::new(tritone - 24, beats, variation.adjust_velocity(30 + rng.gen_range(0..10)), 0.0));
         }
     }
 
@@ -144,6 +143,7 @@ fn generate_drone(
 /// Generate tremolo pattern with variation
 fn generate_tremolo(
     config: &PresetConfig,
+    variation: &PresetVariation,
     beats: f64,
     tempo: u16,
     instrument: u8,
@@ -152,16 +152,16 @@ fn generate_tremolo(
     let root = config.key.root();
     let mut notes = Vec::new();
 
-    // Tremolo interval varies
-    let interval: u8 = match rng.gen_range(0..4) {
+    // Tremolo interval varies based on seed
+    let interval: u8 = match variation.pick_style(1, 4) {
         0 => 1,  // Minor second (very tense)
         1 => 2,  // Major second
         2 => 6,  // Tritone
         _ => 11, // Major 7th
     };
 
-    // Octave varies
-    let octave_shift: i8 = match rng.gen_range(0..3) {
+    // Octave varies based on seed
+    let octave_shift: i8 = match variation.pick_style(2, 3) {
         0 => 0,
         1 => 12,
         _ => 24,
@@ -170,8 +170,8 @@ fn generate_tremolo(
     let note1 = (root as i8 + octave_shift) as u8;
     let note2 = note1 + interval;
 
-    // Tremolo speed varies
-    let tremolo_speed = match rng.gen_range(0..3) {
+    // Tremolo speed varies based on seed
+    let tremolo_speed = match variation.pick_style(3, 3) {
         0 => 0.0625, // 64th notes (very fast)
         1 => 0.125,  // 32nd notes
         _ => 0.25,   // 16th notes
@@ -181,12 +181,12 @@ fn generate_tremolo(
 
     let mut t = 0.0;
     while t < beats {
-        let vel = velocity_base + rng.gen_range(0..15);
+        let vel = variation.adjust_velocity(velocity_base + rng.gen_range(0..15));
         notes.push(Note::new(note1, tremolo_speed, vel, t));
         t += tremolo_speed;
 
         if t < beats {
-            let vel = velocity_base + rng.gen_range(0..15);
+            let vel = variation.adjust_velocity(velocity_base + rng.gen_range(0..15));
             notes.push(Note::new(note2, tremolo_speed, vel, t));
             t += tremolo_speed;
         }
@@ -198,6 +198,7 @@ fn generate_tremolo(
 /// Generate sparse dissonant hits with variation
 fn generate_sparse_hits(
     config: &PresetConfig,
+    variation: &PresetVariation,
     beats: f64,
     tempo: u16,
     instrument: u8,
@@ -206,23 +207,23 @@ fn generate_sparse_hits(
     let root = config.key.root();
     let mut notes = Vec::new();
 
-    // Cluster type varies
-    let cluster: Vec<u8> = match rng.gen_range(0..4) {
+    // Cluster type varies based on seed
+    let cluster: Vec<u8> = match variation.pick_style(4, 4) {
         0 => vec![root, root + 1, root + 6],           // Root + m2 + tritone
         1 => vec![root, root + 3, root + 6, root + 9], // Diminished
         2 => vec![root + 1, root + 5, root + 8],       // Random dissonance
         _ => vec![root, root + 11],                     // Root + major 7th
     };
 
-    // Number of hits varies more
-    let num_hits = rng.gen_range(1..=5);
+    // Number of hits varies based on note_count_factor
+    let num_hits = (1.0 + variation.note_count_factor * 4.0) as usize;
     let mut positions: Vec<f64> = (0..num_hits)
         .map(|_| rng.gen_range(0.25..beats - 0.25))
         .collect();
     positions.sort_by(|a, b| a.partial_cmp(b).unwrap());
 
     for pos in positions {
-        let velocity = 50 + rng.gen_range(0..40);
+        let velocity = variation.adjust_velocity(50 + rng.gen_range(0..40));
         let duration = rng.gen_range(0.3..1.0);
         for &pitch in &cluster {
             notes.push(Note::new(pitch, duration, velocity, pos));
@@ -235,6 +236,7 @@ fn generate_sparse_hits(
 /// Generate sub-bass rumble
 fn generate_sub_bass(
     config: &PresetConfig,
+    variation: &PresetVariation,
     beats: f64,
     tempo: u16,
     rng: &mut impl Rng,
@@ -247,14 +249,15 @@ fn generate_sub_bass(
 
     let mut t = 0.0;
     while t < beats {
-        let vel = 25 + rng.gen_range(0..15);
+        let vel = variation.adjust_velocity(25 + rng.gen_range(0..15));
         let dur: f64 = rng.gen_range(0.5_f64..2.0_f64).min(beats - t);
         notes.push(Note::new(pitch, dur, vel, t));
         t += dur + rng.gen_range(0.0..1.0);
     }
 
-    // Synth bass (38) or contrabass (43)
-    let instrument = if rng.gen_bool(0.5) { 38 } else { 43 };
+    // Synth bass (38) or contrabass (43) based on seed
+    let bass_instruments: &[u8] = &[38, 43];
+    let instrument = variation.pick_instrument(3, bass_instruments);
     NoteSequence::new(notes, instrument, tempo)
 }
 

@@ -53,16 +53,18 @@ impl MoodGenerator for JazzPreset {
         let beats = config.duration_secs * effective_tempo as f64 / 60.0;
 
         // Choose styles from variation
-        let bass_style = match variation.pick_style(0, 3) {
+        let bass_style = match variation.pick_style(0, 4) {
             0 => BassStyle::Walking,
-            1 => BassStyle::Walking, // Prefer walking bass for jazz
+            1 => BassStyle::Walking,    // Prefer walking bass for jazz
+            2 => BassStyle::TwoFeel,    // Half note feel for slower tunes
             _ => BassStyle::Syncopated,
         };
 
-        let comp_style = match variation.pick_style(1, 3) {
+        let comp_style = match variation.pick_style(1, 4) {
             0 => CompStyle::Sparse,
             1 => CompStyle::Medium,
-            _ => CompStyle::Medium, // Prefer medium density for balanced sound
+            2 => CompStyle::Medium,     // Prefer medium density for balanced sound
+            _ => CompStyle::Dense,
         };
 
         // Choose instruments from variation
@@ -599,23 +601,35 @@ mod tests {
 
     #[test]
     fn test_jazz_instruments_vary_by_seed() {
-        // Check that bass instrument varies between seeds
-        let bass_instruments: Vec<u8> = (1..=20)
-            .map(|seed| {
+        // Bass is locked to acoustic bass (32) for authentic jazz sound
+        // Instead, verify piano/keys instrument varies between seeds
+        let piano_instruments: Vec<u8> = (1..=20)
+            .filter_map(|seed| {
                 let config = PresetConfig {
                     seed,
                     duration_secs: 3.0,
                     ..Default::default()
                 };
                 let seqs = JazzPreset.generate(&config);
-                seqs[0].instrument
+                // Piano is second sequence if present (bass is first)
+                seqs.get(1).map(|s| s.instrument)
             })
             .collect();
 
-        let unique_instruments: std::collections::HashSet<_> = bass_instruments.iter().collect();
+        // Bass should always be acoustic bass (32)
+        let bass_config = PresetConfig {
+            seed: 42,
+            duration_secs: 3.0,
+            ..Default::default()
+        };
+        let seqs = JazzPreset.generate(&bass_config);
+        assert_eq!(seqs[0].instrument, 32, "Bass should be acoustic bass (GM 32)");
+
+        // Piano instruments should vary
+        let unique_instruments: std::collections::HashSet<_> = piano_instruments.iter().collect();
         assert!(
             unique_instruments.len() > 1,
-            "Bass instrument should vary across seeds: got {:?}",
+            "Piano instrument should vary across seeds: got {:?}",
             unique_instruments
         );
     }

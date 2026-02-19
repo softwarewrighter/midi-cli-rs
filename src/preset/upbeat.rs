@@ -53,7 +53,7 @@ impl MoodGenerator for UpbeatPreset {
 
         // Tempo variation: ±15% for upbeat (can go faster)
         let tempo_var = 1.0 + (rng.gen_range(-10..=15) as f64 / 100.0);
-        let effective_tempo = ((config.tempo as f64 * tempo_var) as u16).max(80).min(180);
+        let effective_tempo = ((config.tempo as f64 * tempo_var) as u16).clamp(80, 180);
 
         let beats = config.duration_secs * effective_tempo as f64 / 60.0;
 
