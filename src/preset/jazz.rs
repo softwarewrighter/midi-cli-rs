@@ -1,6 +1,7 @@
 //! Jazz mood preset
 //!
-//! Characteristics: Swing feel, walking bass, piano comping, ride cymbal
+//! Characteristics: Swing feel, walking bass, piano comping with flourishes,
+//! brushed drums (ride cymbal, soft hi-hat, gentle snare)
 
 use super::{create_rng, MoodGenerator, PresetConfig, PresetVariation};
 use crate::midi::{Note, NoteSequence};
@@ -9,11 +10,20 @@ use rand::Rng;
 /// Jazz mood generator - nightclub trio style
 pub struct JazzPreset;
 
-/// Bass instrument choices
-const BASS_INSTRUMENTS: &[u8] = &[32, 33, 34, 35]; // acoustic, finger, pick, fretless
+/// Bass instrument choices (acoustic bass preferred for jazz)
+const BASS_INSTRUMENTS: &[u8] = &[32, 32, 32, 33, 34]; // weighted toward acoustic bass
 
-/// Piano/keys instrument choices
-const KEYS_INSTRUMENTS: &[u8] = &[0, 1, 2, 4, 5, 7]; // various pianos/keys
+/// Piano/keys instrument choices (acoustic piano preferred)
+const KEYS_INSTRUMENTS: &[u8] = &[0, 0, 0, 1, 4]; // weighted toward acoustic grand
+
+/// GM Drum note mappings (channel 9)
+const DRUM_RIDE_CYMBAL: u8 = 51;
+const DRUM_RIDE_BELL: u8 = 53;
+const DRUM_CLOSED_HIHAT: u8 = 42;
+const DRUM_PEDAL_HIHAT: u8 = 44;
+const DRUM_SNARE: u8 = 38;
+const DRUM_SIDE_STICK: u8 = 37;
+const DRUM_BRUSH_SWIRL: u8 = 38; // Use snare with low velocity for brush effect
 
 /// Bass pattern styles
 #[derive(Clone, Copy)]
@@ -44,36 +54,31 @@ impl MoodGenerator for JazzPreset {
         // Choose styles from variation
         let bass_style = match variation.pick_style(0, 3) {
             0 => BassStyle::Walking,
-            1 => BassStyle::TwoFeel,
+            1 => BassStyle::Walking, // Prefer walking bass for jazz
             _ => BassStyle::Syncopated,
         };
 
         let comp_style = match variation.pick_style(1, 3) {
             0 => CompStyle::Sparse,
             1 => CompStyle::Medium,
-            _ => CompStyle::Dense,
+            _ => CompStyle::Medium, // Prefer medium density for balanced sound
         };
 
         // Choose instruments from variation
         let bass_inst = variation.pick_instrument(0, BASS_INSTRUMENTS);
         let keys_inst = variation.pick_instrument(1, KEYS_INSTRUMENTS);
 
-        // Layer 1: Bass (always included, style varies)
+        // Layer 1: Walking Bass (always included, prominent)
         sequences.push(generate_walking_bass(config, &variation, beats, effective_tempo, bass_inst, bass_style, &mut rng));
 
-        // Layer 2: Piano comping (based on variation probability)
-        if variation.layer_probs[1] > 0.15 {
+        // Layer 2: Piano comping with flourishes (almost always included)
+        if variation.layer_probs[1] > 0.05 {
             sequences.push(generate_piano_comping(config, &variation, beats, effective_tempo, keys_inst, comp_style, &mut rng));
         }
 
-        // Layer 3: Ride cymbal (variation + intensity based)
-        if variation.layer_probs[2] > (0.7 - config.intensity as f64 / 150.0) {
-            sequences.push(generate_ride_pattern(config, &variation, beats, effective_tempo, &mut rng));
-        }
-
-        // Layer 4: Hi-hat accents (variation + intensity based)
-        if variation.layer_probs[3] > (0.6 - config.intensity as f64 / 200.0) {
-            sequences.push(generate_hihat_accents(&variation, beats, effective_tempo, &mut rng));
+        // Layer 3: Brushed drums on channel 9 (ride + snare brush pattern)
+        if variation.layer_probs[2] > 0.1 {
+            sequences.push(generate_brush_drums(config, &variation, beats, effective_tempo, &mut rng));
         }
 
         sequences
@@ -88,7 +93,7 @@ impl MoodGenerator for JazzPreset {
     }
 }
 
-/// Generate bass line with style variation
+/// Generate walking bass line - the foundation of jazz trio
 fn generate_walking_bass(
     config: &PresetConfig,
     variation: &PresetVariation,
@@ -101,8 +106,8 @@ fn generate_walking_bass(
     let root = config.key.root();
     let mut notes = Vec::new();
 
-    // Chord tones for the key (in bass register)
-    let bass_root = root - 24; // Two octaves down
+    // Chord tones for the key (in bass register - octave 2-3)
+    let bass_root = root.saturating_sub(24).max(28); // Two octaves down, but not below E1
     let chord_tones: Vec<u8> = if config.key.is_minor() {
         vec![bass_root, bass_root + 3, bass_root + 7, bass_root + 10] // m7
     } else {
@@ -110,65 +115,61 @@ fn generate_walking_bass(
     };
 
     let mut t = 0.0;
+    let mut last_pitch = bass_root;
 
     // Determine step size and duration based on style
     let (step, base_duration) = match style {
-        BassStyle::Walking => (1.0, 0.9),
-        BassStyle::TwoFeel => (2.0, 1.8),
-        BassStyle::Syncopated => (1.0, 0.7),
+        BassStyle::Walking => (1.0, 0.95), // Slightly longer notes for legato feel
+        BassStyle::TwoFeel => (2.0, 1.9),
+        BassStyle::Syncopated => (1.0, 0.8),
     };
 
     while t < beats {
-        // For syncopated style, sometimes skip or add extra notes
-        if matches!(style, BassStyle::Syncopated) && rng.gen_bool(0.2) {
+        // For syncopated style, sometimes skip
+        if matches!(style, BassStyle::Syncopated) && rng.gen_bool(0.15) {
             t += 0.5;
             continue;
         }
 
-        // Choose next target (chord tone)
-        let target = chord_tones[rng.gen_range(0..chord_tones.len())];
-
-        // Chromatic approach probability varies by style
-        let chromatic_prob = match style {
-            BassStyle::Walking => 0.35,
-            BassStyle::TwoFeel => 0.15,
-            BassStyle::Syncopated => 0.45,
-        };
-
-        let pitch = if rng.gen_bool(chromatic_prob) && t > 0.0 {
+        // Walking bass: stepwise motion with occasional leaps
+        let pitch = if t == 0.0 {
+            // Start on root
+            bass_root
+        } else if rng.gen_bool(0.7) {
+            // Stepwise motion (scale degree up or down)
+            let step_dir = if rng.gen_bool(0.5) { 1i8 } else { -1 };
+            let step_size = if rng.gen_bool(0.7) { 2 } else { 1 }; // whole step or half step
+            let new_pitch = (last_pitch as i8 + step_dir * step_size) as u8;
+            new_pitch.clamp(bass_root.saturating_sub(5), bass_root + 12)
+        } else if rng.gen_bool(0.5) {
+            // Chord tone
+            chord_tones[rng.gen_range(0..chord_tones.len())]
+        } else {
+            // Chromatic approach to next chord tone
+            let target = chord_tones[rng.gen_range(0..chord_tones.len())];
             if rng.gen_bool(0.5) {
                 target.saturating_sub(1)
             } else {
-                target.saturating_add(1).min(127)
+                target.saturating_add(1).min(bass_root + 12)
             }
-        } else if rng.gen_bool(0.25) {
-            let intervals = config.key.scale_intervals();
-            let interval = intervals[rng.gen_range(0..intervals.len())];
-            (bass_root + interval).min(bass_root + 12)
-        } else {
-            target
         };
 
-        // Velocity variation increases with syncopated style
-        let vel_base = variation.adjust_velocity(70 + (config.intensity as i32 / 5) as u8);
-        let vel_range = match style {
-            BassStyle::Walking => rng.gen_range(0..15),
-            BassStyle::TwoFeel => rng.gen_range(0..10),
-            BassStyle::Syncopated => rng.gen_range(0..25),
-        };
-        let velocity = vel_base.saturating_add(vel_range);
+        // Strong, consistent velocity for walking bass (prominent in mix)
+        let vel_base = 95 + (config.intensity as i32 / 10) as u8;
+        let velocity = variation.adjust_velocity(vel_base).saturating_add(rng.gen_range(0..10));
 
-        // Duration varies slightly
-        let duration: f64 = base_duration + rng.gen_range(-0.1..0.1);
+        // Duration with slight variation
+        let duration: f64 = base_duration + rng.gen_range(-0.05..0.05);
 
-        notes.push(Note::new(pitch, duration.max(0.1), velocity, t));
+        notes.push(Note::new(pitch, duration.max(0.1), velocity.min(127), t));
+        last_pitch = pitch;
 
-        // Syncopated style sometimes adds ghost notes
-        if matches!(style, BassStyle::Syncopated) && rng.gen_bool(0.3) {
+        // Ghost notes on upbeats for syncopated style
+        if matches!(style, BassStyle::Syncopated) && rng.gen_bool(0.25) {
             let ghost_pitch = chord_tones[rng.gen_range(0..chord_tones.len())];
             let ghost_time = t + 0.5;
             if ghost_time < beats {
-                notes.push(Note::new(ghost_pitch, 0.3, vel_base - 20, ghost_time));
+                notes.push(Note::new(ghost_pitch, 0.25, vel_base - 30, ghost_time));
             }
         }
 
@@ -178,7 +179,7 @@ fn generate_walking_bass(
     NoteSequence::new(notes, instrument, tempo)
 }
 
-/// Generate jazz piano comping with style variation
+/// Generate jazz piano comping with chords and flourishes
 fn generate_piano_comping(
     config: &PresetConfig,
     variation: &PresetVariation,
@@ -191,37 +192,37 @@ fn generate_piano_comping(
     let root = config.key.root();
     let mut notes = Vec::new();
 
-    // Jazz voicings - more options for variety
+    // Jazz voicings in comfortable piano range (around middle C)
     let voicings: Vec<Vec<i8>> = if config.key.is_minor() {
         vec![
-            vec![3, 7, 10],       // m7 (3rd, 5th, 7th)
-            vec![3, 10, 14],      // m7 spread
-            vec![10, 14, 17],     // m9 upper
-            vec![-2, 3, 7],       // with 9th below
-            vec![3, 7],           // shell (3rd, 5th)
-            vec![10, 15, 19],     // m11 upper structure
+            vec![3, 7, 10, 14],    // m9 (3rd, 5th, 7th, 9th)
+            vec![3, 10, 14],       // m7 spread
+            vec![10, 14, 17],      // m9 upper
+            vec![-2, 3, 7, 10],    // m7 with 9th below
+            vec![3, 7, 10],        // m7 basic
+            vec![7, 10, 14, 17],   // m11 voicing
         ]
     } else {
         vec![
-            vec![4, 7, 11],       // maj7 (3rd, 5th, 7th)
-            vec![4, 11, 14],      // maj7 spread
-            vec![11, 14, 16],     // maj9 upper
-            vec![-1, 4, 7],       // with 7th below
-            vec![4, 11],          // shell (3rd, 7th)
-            vec![11, 14, 18],     // maj9#11 upper
+            vec![4, 7, 11, 14],    // maj9 (3rd, 5th, 7th, 9th)
+            vec![4, 11, 14],       // maj7 spread
+            vec![11, 14, 16],      // maj9 upper
+            vec![-1, 4, 7, 11],    // maj7 with 7th below
+            vec![4, 7, 11],        // maj7 basic
+            vec![7, 11, 14, 18],   // maj9#11 upper
         ]
     };
 
-    // Skip probability based on style
+    // Skip probability based on style (less skipping = more comping)
     let skip_prob = match style {
-        CompStyle::Sparse => 0.55,
-        CompStyle::Medium => 0.35,
-        CompStyle::Dense => 0.15,
+        CompStyle::Sparse => 0.45,
+        CompStyle::Medium => 0.25,
+        CompStyle::Dense => 0.10,
     };
 
     // Step size varies by style
     let base_step = match style {
-        CompStyle::Sparse => 2.5,
+        CompStyle::Sparse => 2.0,
         CompStyle::Medium => 1.5,
         CompStyle::Dense => 1.0,
     };
@@ -229,29 +230,20 @@ fn generate_piano_comping(
     let mut t = 0.0;
 
     while t < beats - 0.5 {
-        // Skip some beats
+        // Skip some beats for rhythmic interest
         if rng.gen_bool(skip_prob) {
-            t += rng.gen_range(0.5..1.5);
+            t += rng.gen_range(0.5..1.0);
             continue;
         }
 
         // Choose voicing
         let voicing = &voicings[rng.gen_range(0..voicings.len())];
 
-        // Swing offset varies by style
-        let swing_offset = match style {
-            CompStyle::Sparse => {
-                if rng.gen_bool(0.4) { 0.33 } else { 0.0 }
-            }
-            CompStyle::Medium => {
-                if rng.gen_bool(0.35) { 0.33 }
-                else if rng.gen_bool(0.25) { 0.5 }
-                else { 0.0 }
-            }
-            CompStyle::Dense => {
-                if rng.gen_bool(0.5) { rng.gen_range(0.0..0.5) }
-                else { 0.0 }
-            }
+        // Swing feel: slightly late on offbeats
+        let swing_offset = if rng.gen_bool(0.4) {
+            rng.gen_range(0.1..0.4)
+        } else {
+            0.0
         };
 
         let chord_time = t + swing_offset;
@@ -259,34 +251,68 @@ fn generate_piano_comping(
             break;
         }
 
-        // Duration varies by style
-        let duration = match style {
-            CompStyle::Sparse => rng.gen_range(0.8..1.5),
-            CompStyle::Medium => {
-                if rng.gen_bool(0.3) { 0.25 }
-                else if rng.gen_bool(0.4) { 0.5 }
-                else { 1.0 }
-            }
-            CompStyle::Dense => rng.gen_range(0.2..0.6),
+        // Varied chord durations (staccato to legato)
+        let duration = if rng.gen_bool(0.3) {
+            0.2 // Staccato stabs
+        } else if rng.gen_bool(0.4) {
+            0.5 // Medium
+        } else {
+            rng.gen_range(0.8..1.2) // Sustained
         };
 
-        let vel_base = variation.adjust_velocity(45 + (config.intensity as i32 / 4) as u8);
+        // Strong, audible piano (70-95 velocity range)
+        let vel_base = 75 + (config.intensity as i32 / 5) as u8;
+        let vel_base = variation.adjust_velocity(vel_base);
 
         for (i, &interval) in voicing.iter().enumerate() {
-            let pitch = (root as i8 + interval) as u8;
-            let vel = vel_base.saturating_sub(i as u8 * 3).saturating_add(rng.gen_range(0..15));
-            notes.push(Note::new(pitch, duration, vel, chord_time));
+            let pitch = ((root as i8 + interval) as u8).clamp(48, 84); // Keep in piano sweet spot
+            // Top notes slightly louder
+            let vel = vel_base.saturating_add(i as u8 * 2).saturating_add(rng.gen_range(0..10));
+            notes.push(Note::new(pitch, duration, vel.min(110), chord_time));
         }
 
-        // Step forward
-        t += base_step + rng.gen_range(-0.5..0.5);
+        // Add flourishes (grace notes, runs) occasionally
+        if rng.gen_bool(0.15) && chord_time + 0.5 < beats {
+            add_piano_flourish(&mut notes, root, chord_time, &config.key, rng);
+        }
+
+        // Step forward with variation
+        t += base_step + rng.gen_range(-0.3..0.3);
     }
 
     NoteSequence::new(notes, instrument, tempo)
 }
 
-/// Generate ride cymbal pattern with swing
-fn generate_ride_pattern(
+/// Add a jazz piano flourish (short melodic run)
+fn add_piano_flourish(
+    notes: &mut Vec<Note>,
+    root: u8,
+    start_time: f64,
+    key: &super::Key,
+    rng: &mut impl Rng,
+) {
+    let intervals = key.scale_intervals();
+    let flourish_start = start_time + rng.gen_range(0.5..0.8);
+
+    // Pick random starting point in scale
+    let start_degree = rng.gen_range(0..intervals.len());
+    let direction: i8 = if rng.gen_bool(0.5) { 1 } else { -1 };
+    let num_notes = rng.gen_range(2..5);
+
+    let base_vel = 65;
+
+    for i in 0..num_notes {
+        let degree = (start_degree as i8 + direction * i as i8).rem_euclid(intervals.len() as i8) as usize;
+        let pitch = (root + intervals[degree] + 12).clamp(60, 84); // Upper octave
+        let time = flourish_start + i as f64 * 0.1;
+        let vel = base_vel + rng.gen_range(0..15);
+        notes.push(Note::new(pitch, 0.15, vel, time));
+    }
+}
+
+/// Generate brushed drum pattern on GM channel 9
+/// Soft jazz brushes: ride cymbal, gentle hi-hat, occasional snare swirls
+fn generate_brush_drums(
     config: &PresetConfig,
     _variation: &PresetVariation,
     beats: f64,
@@ -296,77 +322,63 @@ fn generate_ride_pattern(
     let _ = config; // May use intensity later
     let mut notes = Vec::new();
 
-    // Ride variations
-    let ride_pitches = [51u8, 53, 59]; // Different ride sounds
-    let ride = ride_pitches[rng.gen_range(0..ride_pitches.len())];
+    // Swing ratio: 0.67 = classic swing feel
+    let swing_ratio = rng.gen_range(0.62..0.72);
 
     let mut t = 0.0;
 
-    // Swing ratio varies: 0.5 = straight, 0.67 = swing, 0.75 = hard swing
-    let swing_ratio = rng.gen_range(0.55..0.72);
-
-    // Pattern density: sometimes skip beats
-    let density = rng.gen_range(0.7..1.0);
-
     while t < beats {
-        if rng.gen_bool(density) {
-            // Main ride hit
-            let vel = 65 + rng.gen_range(0..25);
-            notes.push(Note::new(ride, 0.3, vel, t));
+        // Ride cymbal: main timekeeping (every beat)
+        // Low velocity for brush-like softness
+        let ride_vel = 45 + rng.gen_range(0..20);
+        notes.push(Note::new(DRUM_RIDE_CYMBAL, 0.2, ride_vel, t));
+
+        // Swung "and" on ride (the skip beat)
+        let and_time = t + swing_ratio;
+        if and_time < beats && rng.gen_bool(0.85) {
+            let and_vel = 35 + rng.gen_range(0..15);
+            // Alternate between ride cymbal and ride bell for variation
+            let ride_sound = if rng.gen_bool(0.8) { DRUM_RIDE_CYMBAL } else { DRUM_RIDE_BELL };
+            notes.push(Note::new(ride_sound, 0.15, and_vel, and_time));
         }
 
-        // Swung "and" hit
-        let and_time = t + swing_ratio;
-        if and_time < beats && rng.gen_bool(0.75 * density) {
-            let and_vel = 50 + rng.gen_range(0..20);
-            notes.push(Note::new(ride, 0.25, and_vel, and_time));
+        // Hi-hat: soft pedal hits on beats 2 and 4
+        if (t as i32) % 2 == 1 {
+            let hh_vel = 30 + rng.gen_range(0..15);
+            notes.push(Note::new(DRUM_PEDAL_HIHAT, 0.1, hh_vel, t));
+        }
+
+        // Occasional soft closed hi-hat on offbeats
+        if rng.gen_bool(0.2) {
+            let offbeat_time = t + 0.5;
+            if offbeat_time < beats {
+                notes.push(Note::new(DRUM_CLOSED_HIHAT, 0.08, 25 + rng.gen_range(0..10), offbeat_time));
+            }
+        }
+
+        // Snare brush swirl: gentle hits on 2 and 4 (classic jazz backbeat)
+        // Using side stick or very soft snare for brush effect
+        if (t as i32) % 2 == 1 && rng.gen_bool(0.7) {
+            let snare_vel = 35 + rng.gen_range(0..20); // Soft for brush feel
+            let snare_sound = if rng.gen_bool(0.6) { DRUM_SIDE_STICK } else { DRUM_SNARE };
+            notes.push(Note::new(snare_sound, 0.15, snare_vel, t));
+        }
+
+        // Occasional brush swirl across beats (ghost notes)
+        if rng.gen_bool(0.1) {
+            let swirl_time = t + rng.gen_range(0.2..0.4);
+            if swirl_time < beats {
+                notes.push(Note::new(DRUM_BRUSH_SWIRL, 0.3, 20 + rng.gen_range(0..10), swirl_time));
+            }
         }
 
         t += 1.0;
     }
 
-    // Use tubular bells (14) or celesta (8) for ride-like sound
-    let instrument = if rng.gen_bool(0.7) { 14 } else { 8 };
-    NoteSequence::new(notes, instrument, tempo)
-}
-
-/// Generate hi-hat accents with variation
-fn generate_hihat_accents(
-    variation: &PresetVariation,
-    beats: f64,
-    tempo: u16,
-    rng: &mut impl Rng,
-) -> NoteSequence {
-    let _ = variation; // Using for consistency
-    let mut notes = Vec::new();
-
-    // Hi-hat pitch varies
-    let hihat_pitch = 75 + rng.gen_range(0..10);
-
-    // Pattern style: 2-and-4 vs every beat vs sparse
-    let pattern = rng.gen_range(0..3);
-
-    let mut t = match pattern {
-        0 => 1.0, // 2 and 4
-        1 => 0.0, // Every beat
-        _ => 0.5, // Off-beats
-    };
-
-    let step = match pattern {
-        0 => 2.0,
-        1 => 1.0,
-        _ => 2.0,
-    };
-
-    while t < beats {
-        let vel = 55 + rng.gen_range(0..20);
-        notes.push(Note::new(hihat_pitch, 0.08, vel, t));
-        t += step;
-    }
-
-    // Woodblock (115) or agogo (113) for click sound
-    let instrument = if rng.gen_bool(0.6) { 115 } else { 113 };
-    NoteSequence::new(notes, instrument, tempo)
+    // Create drum sequence on channel 9 (GM drums)
+    let mut seq = NoteSequence::new(notes, 0, tempo);
+    seq.channel = 9; // GM drum channel
+    seq
 }
 
 #[cfg(test)]
