@@ -190,6 +190,17 @@ pub fn preset_editor(props: &PresetEditorProps) -> Html {
         })
     };
 
+    let on_time_seed = {
+        let form = form.clone();
+        Callback::from(move |_: MouseEvent| {
+            let mut state = (*form).clone();
+            // Use milliseconds since epoch as seed
+            let now = js_sys::Date::now() as i64;
+            state.seed = now;
+            form.set(state);
+        })
+    };
+
     let on_submit = {
         let form = form.clone();
         let on_save = props.on_save.clone();
@@ -297,12 +308,22 @@ pub fn preset_editor(props: &PresetEditorProps) -> Html {
 
                     <div class="form-group">
                         <label for="seed">{"Seed"}</label>
-                        <input
-                            type="number"
-                            id="seed"
-                            value={form.seed.to_string()}
-                            oninput={on_seed_change}
-                        />
+                        <div class="seed-input-row">
+                            <input
+                                type="number"
+                                id="seed"
+                                value={form.seed.to_string()}
+                                oninput={on_seed_change}
+                            />
+                            <button
+                                type="button"
+                                class="btn-small btn-secondary seed-now-btn"
+                                onclick={on_time_seed}
+                                title="Use current time as seed"
+                            >
+                                {"Now"}
+                            </button>
+                        </div>
                     </div>
                 </div>
 
