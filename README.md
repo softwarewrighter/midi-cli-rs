@@ -171,7 +171,9 @@ All Rust dependencies use permissive licenses (MIT/Apache-2.0):
 | chrono | Timestamp formatting |
 
 External:
-- **FluidSynth** (LGPL-2.1): WAV rendering engine
+- **FluidSynth** (LGPL-2.1): WAV rendering engine, called as subprocess
+
+> **Note on FluidSynth licensing:** This tool executes FluidSynth as a separate process (`fluidsynth` command), not as a linked library. Subprocess execution does not trigger LGPL's copyleft requirements—your use of this MIT-licensed CLI tool and any audio you generate are not affected by FluidSynth's LGPL license. LGPL only applies if you modify and redistribute FluidSynth itself.
 
 ## SoundFonts
 
