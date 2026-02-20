@@ -615,6 +615,21 @@ fn find_fluidsynth() -> Result<PathBuf, Box<dyn std::error::Error>> {
 
 /// Find a SoundFont file
 fn find_soundfont() -> Result<PathBuf, Box<dyn std::error::Error>> {
+    // Check user's home directory first (~/.soundfonts/)
+    if let Some(home) = std::env::var_os("HOME") {
+        let home_path = PathBuf::from(home);
+        let user_soundfonts = [
+            home_path.join(".soundfonts/default.sf2"),
+            home_path.join(".soundfonts/GeneralUser_GS.sf2"),
+            home_path.join(".soundfonts/FluidR3_GM.sf2"),
+        ];
+        for p in user_soundfonts {
+            if p.exists() {
+                return Ok(p);
+            }
+        }
+    }
+
     // Prioritize MIT-licensed soundfonts for clear commercial use rights
     let paths = [
         // Project local (preferred) - MIT licensed
@@ -640,5 +655,5 @@ fn find_soundfont() -> Result<PathBuf, Box<dyn std::error::Error>> {
         }
     }
 
-    Err("No SoundFont found. Install FluidR3_GM or specify --soundfont.\n  macOS: brew install fluid-synth (includes SoundFont)\n  Ubuntu: apt install fluid-soundfont-gm".into())
+    Err("No SoundFont found. Install FluidR3_GM or specify --soundfont.\n  macOS: brew install fluid-synth (includes SoundFont)\n  Ubuntu: apt install fluid-soundfont-gm\n  Or place a .sf2 file in ~/.soundfonts/".into())
 }
