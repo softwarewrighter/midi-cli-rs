@@ -9,28 +9,52 @@ const KEYS: &[&str] = &[
     "C", "Cm", "D", "Dm", "Eb", "E", "Em", "F", "Fm", "G", "Gm", "A", "Am", "Bb", "B", "Bm",
 ];
 
+/// Instruments with default octaves - must match names in INSTRUMENT_MAP (src/midi/sequence.rs)
 const INSTRUMENTS: &[(&str, u8)] = &[
-    // (name, default_octave)
+    // Pianos (octave 4)
     ("piano", 4),
+    ("acoustic_piano", 4),
+    ("bright_piano", 4),
     ("electric_piano", 4),
-    ("organ", 4),
-    ("guitar", 3),
-    ("bass", 2),
-    ("electric_bass", 2),
-    ("contrabass", 2),
+    // Strings (varied octaves)
     ("strings", 4),
-    ("synth_lead", 4),
-    ("synth_pad", 3),
+    ("violin", 4),
+    ("viola", 4),
+    ("cello", 3),
+    ("contrabass", 2),
+    ("tremolo_strings", 4),
+    ("pizzicato_strings", 4),
+    ("harp", 4),
+    // Woodwinds (octave 4-5)
     ("flute", 5),
+    ("oboe", 4),
     ("clarinet", 4),
-    ("saxophone", 3),
+    ("bassoon", 2),
+    // Brass (octave 3-4)
     ("trumpet", 4),
     ("trombone", 3),
-    ("violin", 4),
-    ("cello", 3),
-    ("vibraphone", 4),
+    ("french_horn", 3),
     ("tuba", 2),
-    ("bassoon", 2),
+    // Synth (octave 3-4)
+    ("synth_pad", 3),
+    ("synth_lead", 4),
+    ("pad_warm", 3),
+    ("pad_choir", 3),
+    // Ambient (octave 3-4)
+    ("atmosphere", 3),
+    ("soundtrack", 4),
+    // Guitar/Bass (octave 2-3)
+    ("acoustic_guitar", 3),
+    ("electric_guitar", 3),
+    ("bass", 2),
+    ("electric_bass", 2),
+    // Bells/Percussion (octave 4-5)
+    ("vibraphone", 4),
+    ("marimba", 4),
+    ("xylophone", 5),
+    ("tubular_bells", 4),
+    ("glockenspiel", 5),
+    ("celesta", 5),
 ];
 
 const DURATIONS: &[(f64, &str)] = &[
