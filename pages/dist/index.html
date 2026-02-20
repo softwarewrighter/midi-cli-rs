@@ -6,8 +6,8 @@
     <title>MIDI CLI - Demo</title>
     
 <script type="module">
-import init, * as bindings from '/midi-cli-rs/midi-cli-demo-f333a815b13b4f42.js';
-const wasm = await init({ module_or_path: '/midi-cli-rs/midi-cli-demo-f333a815b13b4f42_bg.wasm' });
+import init, * as bindings from '/midi-cli-rs/midi-cli-demo-9662bab79aa662be.js';
+const wasm = await init({ module_or_path: '/midi-cli-rs/midi-cli-demo-9662bab79aa662be_bg.wasm' });
 
 
 window.wasmBindings = bindings;
@@ -79,19 +79,20 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
 
         header {
             text-align: center;
-            margin-bottom: 1.5rem;
-            padding-bottom: 1rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
             border-bottom: 1px solid var(--border);
         }
 
         header h1 {
-            font-size: 1.75rem;
-            margin-bottom: 0.5rem;
+            font-size: 1.5rem;
+            margin-bottom: 0.25rem;
+            font-family: 'SF Mono', Monaco, monospace;
         }
 
         header .subtitle {
             color: var(--text-muted);
-            font-size: 1rem;
+            font-size: 0.85rem;
         }
 
         /* Footer */
@@ -111,6 +112,12 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
 
         footer a:hover {
             text-decoration: underline;
+        }
+
+        footer .build-info {
+            font-size: 0.65rem;
+            opacity: 0.7;
+            margin-top: 0.25rem;
         }
 
         .card {
@@ -314,7 +321,7 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
             }
         }
     </style>
-<link rel="modulepreload" href="/midi-cli-rs/midi-cli-demo-f333a815b13b4f42.js" crossorigin="anonymous" integrity="sha384-yMPzIuGXTqUqid2SbN9cWM+p7/QJNChwS6+CaEMPPlZKyvYq/pzqltxub3w7uY9R"><link rel="preload" href="/midi-cli-rs/midi-cli-demo-f333a815b13b4f42_bg.wasm" crossorigin="anonymous" integrity="sha384-2RQYD7PIlBaCdm+YJNLXib7K2bBqIgyTr7QAprNOT3qjbfI6Ojte2L05W9oA/+Rk" as="fetch" type="application/wasm"></head>
+<link rel="modulepreload" href="/midi-cli-rs/midi-cli-demo-9662bab79aa662be.js" crossorigin="anonymous" integrity="sha384-yMPzIuGXTqUqid2SbN9cWM+p7/QJNChwS6+CaEMPPlZKyvYq/pzqltxub3w7uY9R"><link rel="preload" href="/midi-cli-rs/midi-cli-demo-9662bab79aa662be_bg.wasm" crossorigin="anonymous" integrity="sha384-x2hqFzxHm978516ke/N9roW0yBVkMdpWbWqZFfSmE8pr0yb1e9GP/IBOvLB/q5Lb" as="fetch" type="application/wasm"></head>
 <body>
 </body>
 </html>

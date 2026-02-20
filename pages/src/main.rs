@@ -64,21 +64,9 @@ fn app() -> Html {
 
             <div class="app-container">
                 <header>
-                    <h1>{"MIDI CLI Demo"}</h1>
-                    <p class="subtitle">{"Procedural MIDI music generation for AI coding agents"}</p>
+                    <h1>{"midi-cli-rs"}</h1>
+                    <p class="subtitle">{"AI-ready MIDI generation • Listen to mood presets and copy CLI commands"}</p>
                 </header>
-
-                <div class="intro">
-                    <h2>{"About"}</h2>
-                    <p>
-                        {"This demo showcases "}
-                        <code>{"midi-cli-rs"}</code>
-                        {", a Rust CLI tool for generating MIDI music with mood presets."}
-                    </p>
-                    <p>
-                        {"Each example below shows the exact CLI command used and lets you listen to the generated audio."}
-                    </p>
-                </div>
 
                 // Tabs
                 <div class="tabs">
@@ -102,9 +90,11 @@ fn app() -> Html {
 
             <footer>
                 <p>
-                    {"Built with Rust + Yew | "}
-                    <a href="https://github.com/softwarewrighter/midi-cli-rs" target="_blank">{"View on GitHub"}</a>
-                    {" | MIT License"}
+                    {"© 2026 Michael A Wright • MIT License • "}
+                    <a href="https://github.com/softwarewrighter/midi-cli-rs" target="_blank">{"GitHub"}</a>
+                </p>
+                <p class="build-info">
+                    {"Built with Rust + FluidSynth • Demo generated with seed-based melodic variation"}
                 </p>
             </footer>
         </>
