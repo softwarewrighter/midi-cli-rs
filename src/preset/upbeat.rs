@@ -2,7 +2,7 @@
 //!
 //! Characteristics: Major key, rhythmic, energetic, clear pulse
 
-use super::{create_rng, MoodGenerator, PresetConfig};
+use super::{create_rng, MoodGenerator, PresetConfig, PresetVariation};
 use crate::midi::{Note, NoteSequence};
 use rand::Rng;
 
@@ -48,40 +48,38 @@ const RHYTHM_PATTERNS: &[&[f64]] = &[
 
 impl MoodGenerator for UpbeatPreset {
     fn generate(&self, config: &PresetConfig) -> Vec<NoteSequence> {
+        let variation = PresetVariation::from_seed(config.seed);
         let mut rng = create_rng(config.seed);
         let mut sequences = Vec::new();
 
-        // Tempo variation: ±15% for upbeat (can go faster)
-        let tempo_var = 1.0 + (rng.gen_range(-10..=15) as f64 / 100.0);
-        let effective_tempo = ((config.tempo as f64 * tempo_var) as u16).clamp(80, 180);
-
+        let effective_tempo = variation.effective_tempo(config.tempo);
         let beats = config.duration_secs * effective_tempo as f64 / 60.0;
 
-        // Choose instruments
-        let rhythm_inst = RHYTHM_INSTRUMENTS[rng.gen_range(0..RHYTHM_INSTRUMENTS.len())];
-        let bass_inst = BASS_INSTRUMENTS[rng.gen_range(0..BASS_INSTRUMENTS.len())];
-        let lead_inst = LEAD_INSTRUMENTS[rng.gen_range(0..LEAD_INSTRUMENTS.len())];
+        // Choose instruments using variation system
+        let rhythm_inst = variation.pick_instrument(0, RHYTHM_INSTRUMENTS);
+        let bass_inst = variation.pick_instrument(1, BASS_INSTRUMENTS);
+        let lead_inst = variation.pick_instrument(2, LEAD_INSTRUMENTS);
 
-        // Choose pattern
-        let pattern_idx = rng.gen_range(0..RHYTHM_PATTERNS.len());
+        // Choose pattern based on seed
+        let pattern_idx = variation.pick_style(0, RHYTHM_PATTERNS.len());
 
         // Layer 1: Rhythmic chord pattern (always)
-        sequences.push(generate_rhythm_pattern(config, beats, effective_tempo, rhythm_inst, pattern_idx, &mut rng));
+        sequences.push(generate_rhythm_pattern(config, &variation, beats, effective_tempo, rhythm_inst, pattern_idx, &mut rng));
 
-        // Layer 2: Bass line (90% chance)
-        if rng.gen_bool(0.9) {
-            sequences.push(generate_bass_line(config, beats, effective_tempo, bass_inst, &mut rng));
+        // Layer 2: Bass line (high probability)
+        if variation.layer_probs[1] > 0.1 {
+            sequences.push(generate_bass_line(config, &variation, beats, effective_tempo, bass_inst, &mut rng));
         }
 
         // Layer 3: Melody hint (probability + intensity)
-        let melody_prob = 0.3 + (config.intensity as f64 / 150.0);
-        if rng.gen_bool(melody_prob) {
-            sequences.push(generate_melody_hint(config, beats, effective_tempo, lead_inst, &mut rng));
+        let melody_threshold = 0.7 - (config.intensity as f64 / 150.0);
+        if variation.layer_probs[2] > melody_threshold {
+            sequences.push(generate_melody_hint(config, &variation, beats, effective_tempo, lead_inst, &mut rng));
         }
 
-        // Layer 4: Percussion accent (random chance)
-        if rng.gen_bool(0.4) {
-            sequences.push(generate_percussion_accent(config, beats, effective_tempo, &mut rng));
+        // Layer 4: Percussion accent
+        if variation.layer_probs[3] > 0.6 {
+            sequences.push(generate_percussion_accent(config, &variation, beats, effective_tempo, &mut rng));
         }
 
         sequences
@@ -99,6 +97,7 @@ impl MoodGenerator for UpbeatPreset {
 /// Generate rhythmic chord pattern with variation
 fn generate_rhythm_pattern(
     config: &PresetConfig,
+    variation: &PresetVariation,
     beats: f64,
     tempo: u16,
     instrument: u8,
@@ -111,8 +110,8 @@ fn generate_rhythm_pattern(
     let pattern = RHYTHM_PATTERNS[pattern_idx];
     let pattern_len = 4.0;
 
-    // Velocity variation style
-    let accent_style = rng.gen_range(0..3);
+    // Velocity variation style from seed
+    let accent_style = variation.pick_style(1, 3);
 
     let mut t = 0.0;
     while t < beats {
@@ -123,7 +122,7 @@ fn generate_rhythm_pattern(
             }
 
             // Velocity varies by accent style
-            let velocity = match accent_style {
+            let base_velocity = match accent_style {
                 0 => {
                     // First beat accent
                     if offset == 0.0 { 85 + rng.gen_range(0..15) } else { 60 + rng.gen_range(0..20) }
@@ -137,6 +136,7 @@ fn generate_rhythm_pattern(
                     65 + rng.gen_range(0..25)
                 }
             };
+            let velocity = variation.adjust_velocity(base_velocity);
 
             // Duration varies
             let duration = if rng.gen_bool(0.3) {
@@ -159,9 +159,10 @@ fn generate_rhythm_pattern(
     NoteSequence::new(notes, instrument, tempo)
 }
 
-/// Generate bass line with variation
+/// Generate bass line with melodic variation
 fn generate_bass_line(
     config: &PresetConfig,
+    variation: &PresetVariation,
     beats: f64,
     tempo: u16,
     instrument: u8,
@@ -172,56 +173,94 @@ fn generate_bass_line(
     let third = if config.key.is_minor() { root + 3 } else { root + 4 };
     let mut notes = Vec::new();
 
-    // Bass pattern style
-    let style = rng.gen_range(0..4);
+    // Bass pattern style from seed
+    let style = variation.pick_style(2, 4);
+
+    // Get contour for melodic bass movement
+    let contour = variation.get_contour(variation.phrase_length as usize);
+    let bass_notes = [root - 12, third - 12, fifth - 12, root - 24];
+    let mut bass_idx = (variation.scale_offset as usize) % bass_notes.len();
+    let mut phrase_pos = 0;
 
     let mut t = 0.0;
 
     match style {
         0 => {
-            // Root-fifth alternating
-            let mut is_root = true;
+            // Contour-driven bass line
             while t < beats {
-                let pitch = if is_root { root - 12 } else { fifth - 12 };
-                let velocity = 85 + rng.gen_range(0..15);
-                notes.push(Note::new(pitch, 0.4, velocity, t));
-                is_root = !is_root;
+                let pitch = bass_notes[bass_idx % bass_notes.len()];
+                let velocity = variation.adjust_velocity(85 + rng.gen_range(0..15));
+
+                if !variation.should_rest(rng) {
+                    notes.push(Note::new(pitch, 0.4, velocity, t));
+                }
+
+                // Move based on contour
+                let direction = contour[phrase_pos % contour.len()];
+                match direction {
+                    1 => bass_idx = (bass_idx + 1) % bass_notes.len(),
+                    -1 => bass_idx = if bass_idx > 0 { bass_idx - 1 } else { bass_notes.len() - 1 },
+                    _ => {}
+                }
+                phrase_pos += 1;
                 t += 0.5;
             }
         }
         1 => {
-            // Root-third-fifth pattern
-            let pattern = [root - 12, third - 12, fifth - 12, third - 12];
-            let mut idx = 0;
+            // Root-third-fifth with contour variation
             while t < beats {
-                let pitch = pattern[idx % 4];
-                let velocity = 80 + rng.gen_range(0..20);
+                let pitch = bass_notes[bass_idx % 3]; // First 3 notes only
+                let velocity = variation.adjust_velocity(80 + rng.gen_range(0..20));
                 notes.push(Note::new(pitch, 0.35, velocity, t));
-                idx += 1;
+
+                let direction = contour[phrase_pos % contour.len()];
+                bass_idx = match direction {
+                    1 => (bass_idx + 1) % 3,
+                    -1 => if bass_idx > 0 { bass_idx - 1 } else { 2 },
+                    _ => bass_idx,
+                };
+                phrase_pos += 1;
                 t += 0.5;
             }
         }
         2 => {
-            // Syncopated bass
+            // Syncopated bass with contour
             while t < beats {
-                let pitch = if rng.gen_bool(0.7) { root - 12 } else { fifth - 12 };
-                let velocity = 90 + rng.gen_range(0..10);
+                let pitch = bass_notes[bass_idx % bass_notes.len()];
+                let velocity = variation.adjust_velocity(90 + rng.gen_range(0..10));
                 let step = if rng.gen_bool(0.3) { 0.75 } else { 0.5 };
-                notes.push(Note::new(pitch, 0.3, velocity, t));
+
+                if !variation.should_rest(rng) {
+                    notes.push(Note::new(pitch, 0.3, velocity, t));
+                }
+
+                let direction = contour[phrase_pos % contour.len()];
+                bass_idx = match direction {
+                    1 => (bass_idx + 1) % bass_notes.len(),
+                    -1 => if bass_idx > 0 { bass_idx - 1 } else { bass_notes.len() - 1 },
+                    _ => bass_idx,
+                };
+                phrase_pos += 1;
                 t += step;
             }
         }
         _ => {
-            // Octave jumps
+            // Octave jumps with contour influence
             let mut low = true;
             while t < beats {
                 let octave = if low { -12 } else { 0 };
                 let pitch = (root as i8 + octave) as u8;
-                let velocity = 85 + rng.gen_range(0..15);
+                let velocity = variation.adjust_velocity(85 + rng.gen_range(0..15));
                 notes.push(Note::new(pitch, 0.4, velocity, t));
-                if rng.gen_bool(0.4) {
-                    low = !low;
-                }
+
+                // Contour influences octave switching
+                let direction = contour[phrase_pos % contour.len()];
+                low = match direction {
+                    1 => false,  // Up = high octave
+                    -1 => true,  // Down = low octave
+                    _ => low,    // Stay
+                };
+                phrase_pos += 1;
                 t += 0.5;
             }
         }
@@ -230,9 +269,10 @@ fn generate_bass_line(
     NoteSequence::new(notes, instrument, tempo)
 }
 
-/// Generate melody hint with variation
+/// Generate melody hint with contour-based variation
 fn generate_melody_hint(
     config: &PresetConfig,
+    variation: &PresetVariation,
     beats: f64,
     tempo: u16,
     instrument: u8,
@@ -242,23 +282,39 @@ fn generate_melody_hint(
     let root = config.key.root();
     let mut notes = Vec::new();
 
-    // Number of notes varies more
-    let num_notes = rng.gen_range(2..=8);
+    // Number of notes varies with seed
+    let num_notes = (variation.phrase_length as usize).max(3).min(8);
 
     // Start position varies
-    let start_pos = beats * rng.gen_range(0.4..0.7);
+    let start_pos = beats * (0.3 + variation.density_factor * 0.3);
 
-    // Melodic style
-    let style = rng.gen_range(0..3);
+    // Melodic style from seed
+    let style = variation.pick_style(3, 3);
+
+    // Get contour for melodic direction
+    let contour = variation.get_contour(num_notes);
+    let mut scale_idx = (variation.scale_offset as usize) % scale.len();
+
+    // Base octave from seed
+    let base_octave: i8 = match variation.style_choices[3] % 3 {
+        0 => 0,
+        1 => 12,
+        _ => -12,
+    };
 
     for i in 0..num_notes {
-        let interval = scale[rng.gen_range(0..scale.len())];
-        let octave: i8 = match style {
+        // Skip for rests
+        if variation.should_rest(rng) && i > 0 {
+            continue;
+        }
+
+        let interval = scale[scale_idx % scale.len()];
+        let octave: i8 = base_octave + match style {
             0 => if rng.gen_bool(0.3) { 12 } else { 0 },
             1 => rng.gen_range(0..2) * 12,
             _ => if i % 2 == 0 { 0 } else { 12 },
         };
-        let pitch = (root as i8 + interval as i8 + octave) as u8;
+        let pitch = ((root as i8 + interval as i8 + octave) as u8).clamp(48, 96);
 
         let step = match style {
             0 => 0.25,
@@ -270,7 +326,7 @@ fn generate_melody_hint(
             break;
         }
 
-        let velocity = 65 + rng.gen_range(0..25);
+        let velocity = variation.adjust_velocity(65 + rng.gen_range(0..25));
         let duration = if i == num_notes - 1 {
             rng.gen_range(0.4..0.8)
         } else {
@@ -278,25 +334,35 @@ fn generate_melody_hint(
         };
 
         notes.push(Note::new(pitch, duration, velocity, pos));
+
+        // Move through scale based on contour
+        let direction = contour[i % contour.len()];
+        let step_size = variation.get_interval(rng) as usize;
+        match direction {
+            1 => scale_idx = (scale_idx + step_size) % scale.len(),
+            -1 => scale_idx = if scale_idx >= step_size { scale_idx - step_size } else { scale.len() - 1 },
+            _ => {} // Hold
+        }
     }
 
     NoteSequence::new(notes, instrument, tempo)
 }
 
-/// Generate percussion accent
+/// Generate percussion accent with variation
 fn generate_percussion_accent(
     _config: &PresetConfig,
+    variation: &PresetVariation,
     beats: f64,
     tempo: u16,
     rng: &mut impl Rng,
 ) -> NoteSequence {
     let mut notes = Vec::new();
 
-    // Accent pitch (higher = brighter)
-    let pitch = 70 + rng.gen_range(0..15);
+    // Accent pitch varies by seed
+    let pitch = 70 + (variation.style_choices[4] % 15);
 
-    // Pattern style
-    let style = rng.gen_range(0..3);
+    // Pattern style from seed
+    let style = variation.pick_style(4, 3);
 
     let mut t = 0.0;
     match style {
@@ -304,30 +370,34 @@ fn generate_percussion_accent(
             // Backbeat (2 and 4)
             t = 1.0;
             while t < beats {
-                notes.push(Note::new(pitch, 0.1, 70 + rng.gen_range(0..20), t));
+                let vel = variation.adjust_velocity(70 + rng.gen_range(0..20));
+                notes.push(Note::new(pitch, 0.1, vel, t));
                 t += 2.0;
             }
         }
         1 => {
             // Every beat
             while t < beats {
-                notes.push(Note::new(pitch, 0.08, 60 + rng.gen_range(0..15), t));
+                let vel = variation.adjust_velocity(60 + rng.gen_range(0..15));
+                notes.push(Note::new(pitch, 0.08, vel, t));
                 t += 1.0;
             }
         }
         _ => {
-            // Sparse accents
+            // Sparse accents - use rest probability
             while t < beats {
-                if rng.gen_bool(0.4) {
-                    notes.push(Note::new(pitch, 0.1, 75 + rng.gen_range(0..15), t));
+                if !variation.should_rest(rng) {
+                    let vel = variation.adjust_velocity(75 + rng.gen_range(0..15));
+                    notes.push(Note::new(pitch, 0.1, vel, t));
                 }
                 t += 1.0;
             }
         }
     }
 
-    // Woodblock or similar
-    let instrument = if rng.gen_bool(0.5) { 115 } else { 116 };
+    // Woodblock or similar - based on seed
+    let perc_instruments = &[115u8, 116, 117, 76]; // Woodblock, taiko, melodic tom, pan flute
+    let instrument = variation.pick_instrument(4, perc_instruments);
     NoteSequence::new(notes, instrument, tempo)
 }
 

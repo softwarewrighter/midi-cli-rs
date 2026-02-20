@@ -124,7 +124,7 @@ fn generate_drone_layer(
     NoteSequence::new(notes, instrument, tempo)
 }
 
-/// Generate sporadic pentatonic tones with variation
+/// Generate sporadic pentatonic tones with melodic contour variation
 fn generate_sporadic_tones(
     config: &PresetConfig,
     variation: &PresetVariation,
@@ -137,10 +137,10 @@ fn generate_sporadic_tones(
     let mut notes = Vec::new();
 
     // Pentatonic scale
-    let pentatonic = if config.key.is_minor() {
-        [0, 3, 5, 7, 10]
+    let pentatonic: &[u8] = if config.key.is_minor() {
+        &[0, 3, 5, 7, 10]
     } else {
-        [0, 2, 4, 7, 9]
+        &[0, 2, 4, 7, 9]
     };
 
     // Number of tones varies with variation
@@ -152,22 +152,59 @@ fn generate_sporadic_tones(
         .collect();
     positions.sort_by(|a, b| a.partial_cmp(b).unwrap());
 
+    // Get contour for melodic movement
+    let contour = variation.get_contour(num_tones);
+    let mut scale_idx = (variation.scale_offset as usize) % pentatonic.len();
+
+    // Base octave varies by seed
+    let base_octave: u8 = match variation.style_choices[2] % 3 {
+        0 => 0,
+        1 => 12,
+        _ => 24,
+    };
+    let mut current_octave = base_octave;
+
     // Octave range varies
     let max_octave = match variation.pick_style(2, 3) {
         0 => 1,
         1 => 2,
         _ => 3,
-    };
+    } * 12;
 
-    for pos in positions {
-        let interval = pentatonic[rng.gen_range(0..pentatonic.len())];
-        let octave = rng.gen_range(0..=max_octave) as u8 * 12;
-        let pitch = root + interval + octave;
+    for (i, pos) in positions.iter().enumerate() {
+        // Skip for ambient rests (sparse texture)
+        if variation.should_rest(rng) {
+            continue;
+        }
+
+        let interval = pentatonic[scale_idx % pentatonic.len()];
+        let pitch = root + interval + current_octave;
 
         let velocity = variation.adjust_velocity(20 + rng.gen_range(0..20));
         let duration = rng.gen_range(1.5_f64..4.0_f64);
 
-        notes.push(Note::new(pitch, duration, velocity, pos));
+        notes.push(Note::new(pitch, duration, velocity, *pos));
+
+        // Move through scale based on contour
+        let direction = contour[i % contour.len()];
+        let step = variation.get_interval(rng) as usize;
+        match direction {
+            1 => {
+                scale_idx = (scale_idx + step) % pentatonic.len();
+                // Sometimes move up an octave
+                if rng.gen_bool(0.25) && current_octave < max_octave as u8 {
+                    current_octave += 12;
+                }
+            }
+            -1 => {
+                scale_idx = if scale_idx >= step { scale_idx - step } else { pentatonic.len() - 1 };
+                // Sometimes move down an octave
+                if rng.gen_bool(0.25) && current_octave > 0 {
+                    current_octave -= 12;
+                }
+            }
+            _ => {} // Stay
+        }
     }
 
     NoteSequence::new(notes, instrument, tempo)

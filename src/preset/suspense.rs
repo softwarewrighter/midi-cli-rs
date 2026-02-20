@@ -140,7 +140,19 @@ fn generate_drone(
     NoteSequence::new(notes, instrument, tempo)
 }
 
-/// Generate tremolo pattern with variation
+/// Accent patterns for tremolo dynamics
+const ACCENT_PATTERNS: &[&[i8]] = &[
+    &[10, -10],              // loud-soft
+    &[-10, 10],              // soft-loud
+    &[-10, -10, 10],         // soft-soft-loud
+    &[10, 10, -10],          // loud-loud-soft
+    &[10, 0, -10, 0],        // loud-mid-soft-mid
+    &[-15, 0, 10, 15],       // crescendo
+    &[15, 10, 0, -15],       // decrescendo
+    &[10, -15, 10, -15],     // strong alternating
+];
+
+/// Generate tremolo pattern with melodic and dynamic variation
 fn generate_tremolo(
     config: &PresetConfig,
     variation: &PresetVariation,
@@ -152,13 +164,8 @@ fn generate_tremolo(
     let root = config.key.root();
     let mut notes = Vec::new();
 
-    // Tremolo interval varies based on seed
-    let interval: u8 = match variation.pick_style(1, 4) {
-        0 => 1,  // Minor second (very tense)
-        1 => 2,  // Major second
-        2 => 6,  // Tritone
-        _ => 11, // Major 7th
-    };
+    // Use chromatic/tension scale for suspense
+    let tension_intervals: &[u8] = &[0, 1, 3, 6, 7, 8, 11]; // Root, m2, m3, tritone, P5, m6, M7
 
     // Octave varies based on seed
     let octave_shift: i8 = match variation.pick_style(2, 3) {
@@ -167,9 +174,6 @@ fn generate_tremolo(
         _ => 24,
     };
 
-    let note1 = (root as i8 + octave_shift) as u8;
-    let note2 = note1 + interval;
-
     // Tremolo speed varies based on seed
     let tremolo_speed = match variation.pick_style(3, 3) {
         0 => 0.0625, // 64th notes (very fast)
@@ -177,18 +181,72 @@ fn generate_tremolo(
         _ => 0.25,   // 16th notes
     };
 
+    // Number of tones in tremolo group (1-4)
+    let tone_count = match variation.style_choices[4] % 4 {
+        0 => 1,  // Single repeated note (simple tension)
+        1 => 2,  // Classic two-note tremolo
+        2 => 3,  // Three-note pattern
+        _ => 4,  // Four-note pattern
+    };
+
+    // Select accent pattern based on seed
+    let accent_pattern = ACCENT_PATTERNS[(variation.style_choices[5] as usize) % ACCENT_PATTERNS.len()];
+
     let velocity_base = 20 + (config.intensity as i32 / 5) as u8;
 
-    let mut t = 0.0;
-    while t < beats {
-        let vel = variation.adjust_velocity(velocity_base + rng.gen_range(0..15));
-        notes.push(Note::new(note1, tremolo_speed, vel, t));
-        t += tremolo_speed;
+    // Get contour pattern for melodic movement
+    let phrase_len = variation.phrase_length as usize;
+    let contour = variation.get_contour(phrase_len);
+    let mut scale_idx = (variation.scale_offset as usize) % tension_intervals.len();
 
-        if t < beats {
-            let vel = variation.adjust_velocity(velocity_base + rng.gen_range(0..15));
-            notes.push(Note::new(note2, tremolo_speed, vel, t));
-            t += tremolo_speed;
+    let mut t = 0.0;
+    let mut phrase_pos = 0;
+    let mut note_in_group = 0;
+    let mut accent_pos = 0;
+
+    while t < beats {
+        // Build the current tone group
+        let mut tone_pitches: Vec<u8> = Vec::new();
+        for i in 0..tone_count {
+            let idx = (scale_idx + i) % tension_intervals.len();
+            let interval = tension_intervals[idx];
+            let pitch = ((root as i8 + octave_shift) as u8).saturating_add(interval);
+            tone_pitches.push(pitch);
+        }
+
+        // Play current note in group
+        let pitch = tone_pitches[note_in_group % tone_pitches.len()];
+
+        // Apply accent pattern to velocity
+        let accent = accent_pattern[accent_pos % accent_pattern.len()];
+        let vel_adjusted = (velocity_base as i16 + accent as i16).clamp(15, 100) as u8;
+        let vel = variation.adjust_velocity(vel_adjusted + rng.gen_range(0..10));
+
+        // Sometimes skip for rest (tension builder)
+        if !variation.should_rest(rng) {
+            notes.push(Note::new(pitch, tremolo_speed, vel, t));
+        }
+
+        t += tremolo_speed;
+        note_in_group += 1;
+        accent_pos += 1;
+
+        // When we've cycled through the tone group, potentially change
+        if note_in_group >= tone_count {
+            note_in_group = 0;
+            phrase_pos += 1;
+
+            // Move through scale based on contour
+            if phrase_pos >= phrase_len {
+                phrase_pos = 0;
+                let direction = contour[rng.gen_range(0..contour.len())];
+                let step = variation.get_interval(rng) as usize;
+                match direction {
+                    1 => scale_idx = (scale_idx + step) % tension_intervals.len(),
+                    -1 => scale_idx = if scale_idx >= step { scale_idx - step } else { tension_intervals.len() - 1 },
+                    _ => {} // Stay on current
+                }
+            }
         }
     }
 

@@ -123,7 +123,7 @@ fn generate_pad(
     NoteSequence::new(notes, instrument, tempo)
 }
 
-/// Generate bell tones with variation
+/// Generate bell tones with melodic variation
 fn generate_bell_tones(
     config: &PresetConfig,
     variation: &PresetVariation,
@@ -135,7 +135,7 @@ fn generate_bell_tones(
     let root = config.key.root();
     let mut notes = Vec::new();
 
-    // Scale varies
+    // Scale varies - all have eerie quality
     let scale: &[u8] = match variation.pick_style(1, 3) {
         0 => &[0, 2, 3, 5, 6, 8, 9, 11],  // Diminished
         1 => &[0, 1, 4, 5, 8, 9],          // Augmented
@@ -145,22 +145,59 @@ fn generate_bell_tones(
     // Number of notes varies
     let num_notes = (2.0 + variation.note_count_factor * 3.0) as usize;
 
+    // Get contour for melodic movement
+    let contour = variation.get_contour(num_notes);
+    let mut scale_idx = (variation.scale_offset as usize) % scale.len();
+
+    // Octave starting point varies by seed
+    let base_octave: u8 = match variation.style_choices[2] % 3 {
+        0 => 12,
+        1 => 24,
+        _ => 36,
+    };
+    let mut current_octave = base_octave;
+
     for i in 0..num_notes {
-        let interval = scale[rng.gen_range(0..scale.len())];
-        let octave_offset = rng.gen_range(1..=3) * 12;
-        let pitch = root + interval + octave_offset;
+        // Skip some notes for rests (eerie sparse feeling)
+        if variation.should_rest(rng) {
+            continue;
+        }
+
+        let interval = scale[scale_idx % scale.len()];
+        let pitch = root + interval + current_octave;
 
         let position = (i as f64 / num_notes as f64) * beats * 0.85;
         let velocity = variation.adjust_velocity(25 + rng.gen_range(0..20));
         let duration = rng.gen_range(0.8_f64..2.5_f64);
 
         notes.push(Note::new(pitch, duration, velocity, position));
+
+        // Move through scale based on contour
+        let direction = contour[i % contour.len()];
+        let step = variation.get_interval(rng) as usize;
+        match direction {
+            1 => {
+                scale_idx = (scale_idx + step) % scale.len();
+                // Occasionally jump up an octave
+                if rng.gen_bool(0.2) && current_octave < 36 {
+                    current_octave += 12;
+                }
+            }
+            -1 => {
+                scale_idx = if scale_idx >= step { scale_idx - step } else { scale.len() - 1 };
+                // Occasionally drop an octave
+                if rng.gen_bool(0.2) && current_octave > 12 {
+                    current_octave -= 12;
+                }
+            }
+            _ => {} // Stay
+        }
     }
 
     NoteSequence::new(notes, instrument, tempo)
 }
 
-/// Generate breath/texture with variation
+/// Generate breath/texture with melodic contour variation
 fn generate_breath_texture(
     config: &PresetConfig,
     variation: &PresetVariation,
@@ -181,21 +218,45 @@ fn generate_breath_texture(
         _ => 0.75,
     };
 
-    let mut current_pitch = root as i8;
+    // Use chromatic scale for eerie crawling texture
+    let chromatic: &[i8] = &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+
+    // Get contour for movement direction
+    let phrase_len = variation.phrase_length as usize;
+    let contour = variation.get_contour(phrase_len);
+    let mut scale_idx = (variation.scale_offset as usize) % chromatic.len();
+    let mut phrase_pos = 0;
+
     let mut t = 0.0;
 
     while t < beats {
-        let pitch = current_pitch.clamp(root as i8 - 8, root as i8 + 8) as u8;
+        // Skip for rests
+        if variation.should_rest(rng) {
+            t += step_duration;
+            continue;
+        }
+
+        let interval = chromatic[scale_idx % chromatic.len()];
+        let pitch = ((root as i8 + interval).clamp(root as i8 - 8, root as i8 + 12)) as u8;
         let velocity = variation.adjust_velocity(12 + rng.gen_range(0..12));
 
         notes.push(Note::new(pitch, step_duration, velocity, t));
 
-        // Movement varies
-        current_pitch += match style {
-            0 => rng.gen_range(-1..=1),
-            1 => rng.gen_range(-2..=2),
-            _ => if rng.gen_bool(0.7) { 0 } else { rng.gen_range(-3..=3) },
-        };
+        // Move based on contour
+        let direction = contour[phrase_pos % contour.len()];
+        let step = variation.get_interval(rng) as usize;
+        match direction {
+            1 => scale_idx = (scale_idx + step) % chromatic.len(),
+            -1 => scale_idx = if scale_idx >= step { scale_idx - step } else { chromatic.len() - step },
+            _ => {
+                // Occasional micro-movement on "hold"
+                if rng.gen_bool(0.3) {
+                    scale_idx = (scale_idx + 1) % chromatic.len();
+                }
+            }
+        }
+
+        phrase_pos += 1;
         t += step_duration;
     }
 

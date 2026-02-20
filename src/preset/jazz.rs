@@ -153,6 +153,11 @@ fn generate_walking_bass(
         BassStyle::Syncopated => (1.0, 0.8),
     };
 
+    // Get contour for melodic direction - this makes bass lines differ by seed
+    let phrase_len = variation.phrase_length as usize;
+    let contour = variation.get_contour(phrase_len);
+    let mut phrase_pos = 0;
+
     // Helper to find nearest scale note
     let find_scale_step = |from: u8, direction: i8| -> u8 {
         let idx = scale_notes.iter().position(|&n| n >= from).unwrap_or(0);
@@ -170,21 +175,29 @@ fn generate_walking_bass(
     };
 
     while t < beats {
-        // For syncopated style, sometimes skip
-        if matches!(style, BassStyle::Syncopated) && rng.gen_bool(0.15) {
+        // For syncopated style, use seed-based rest probability
+        if matches!(style, BassStyle::Syncopated) && variation.should_rest(rng) {
             t += 0.5;
+            phrase_pos += 1;
             continue;
         }
 
-        // Walking bass: primarily scale-wise motion with occasional leaps to chord tones
+        // Get contour direction for this position
+        let contour_dir = contour[phrase_pos % contour.len()];
+
+        // Walking bass: contour-guided motion with occasional leaps
         let pitch = if t == 0.0 {
             // Start on root
             bass_root
-        } else if rng.gen_bool(0.65) {
-            // Scale-wise stepwise motion (follow the scale up or down)
-            let direction = if rng.gen_bool(0.5) { 1i8 } else { -1 };
+        } else if rng.gen_bool(0.55) {
+            // Follow contour direction for stepwise motion
+            let direction = match contour_dir {
+                1 => 1i8,
+                -1 => -1i8,
+                _ => if rng.gen_bool(0.5) { 1 } else { -1 },
+            };
             find_scale_step(last_pitch, direction)
-        } else if rng.gen_bool(0.6) {
+        } else if rng.gen_bool(0.5) {
             // Leap to a chord tone (sounds strong and anchored)
             chord_tones[rng.gen_range(0..chord_tones.len())]
         } else {
@@ -196,6 +209,8 @@ fn generate_walking_bass(
                 target.saturating_add(1).min(bass_root + 12)
             }
         };
+
+        phrase_pos += 1;
 
         // Strong velocity with jazzy dynamic variation
         let vel_base = 95 + (config.intensity as i32 / 10) as u8;
@@ -299,17 +314,24 @@ fn generate_piano_comping(
         CompStyle::Dense => 1.0,
     };
 
+    // Get contour for voicing selection variation
+    let phrase_len = variation.phrase_length as usize;
+    let contour = variation.get_contour(phrase_len);
+    let mut voicing_idx = (variation.scale_offset as usize) % voicings.len();
+    let mut phrase_pos = 0;
+
     let mut t = 0.0;
 
     while t < beats - 0.5 {
-        // Skip some beats for rhythmic interest
-        if rng.gen_bool(skip_prob) {
+        // Skip based on seed rest probability instead of fixed prob
+        if variation.should_rest(rng) || rng.gen_bool(skip_prob * 0.5) {
             t += rng.gen_range(0.5..1.0);
+            phrase_pos += 1;
             continue;
         }
 
-        // Choose voicing
-        let voicing = &voicings[rng.gen_range(0..voicings.len())];
+        // Choose voicing based on contour-guided index
+        let voicing = &voicings[voicing_idx % voicings.len()];
 
         // Swing feel: slightly late on offbeats
         let swing_offset = if rng.gen_bool(0.4) {
@@ -348,6 +370,15 @@ fn generate_piano_comping(
         if rng.gen_bool(0.15) && chord_time + 0.5 < beats {
             add_piano_flourish(&mut notes, root, chord_time, &config.key, rng);
         }
+
+        // Move voicing selection based on contour
+        let direction = contour[phrase_pos % contour.len()];
+        match direction {
+            1 => voicing_idx = (voicing_idx + 1) % voicings.len(),
+            -1 => voicing_idx = if voicing_idx > 0 { voicing_idx - 1 } else { voicings.len() - 1 },
+            _ => {} // Stay on current voicing
+        }
+        phrase_pos += 1;
 
         // Step forward with variation
         t += base_step + rng.gen_range(-0.3..0.3);
