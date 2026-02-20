@@ -125,7 +125,7 @@ fn generate_pad_chord(
     NoteSequence::new(notes, instrument, tempo)
 }
 
-/// Generate gentle arpeggio with variation
+/// Generate gentle arpeggio/melody with rich variation
 fn generate_arpeggio(
     config: &PresetConfig,
     variation: &PresetVariation,
@@ -134,48 +134,148 @@ fn generate_arpeggio(
     instrument: u8,
     rng: &mut impl Rng,
 ) -> NoteSequence {
-    let chord = config.key.chord_tones();
+    let scale = config.key.scale_intervals();
+    let root = config.key.root();
     let mut notes = Vec::new();
 
-    // Arpeggio style varies
+    // Arpeggio style varies timing
     let style = variation.pick_style(1, 4);
-
-    let (note_duration, note_spacing): (f64, f64) = match style {
+    let (base_duration, base_spacing): (f64, f64) = match style {
         0 => (0.75, 1.0),   // Slow, sustained
         1 => (0.5, 0.5),    // Medium, flowing
         2 => (0.4, 0.75),   // Quick plucks
         _ => (1.0, 1.5),    // Very slow, meditative
     };
 
-    // Octave offset varies
-    let octave_offset = if variation.style_choices[1] % 3 == 0 { 0i8 } else { 12 };
+    // Octave varies based on seed
+    let base_octave: i8 = match variation.style_choices[1] % 4 {
+        0 => 0,
+        1 => 12,
+        2 => -12,
+        _ => if rng.gen_bool(0.5) { 0 } else { 12 },
+    };
 
-    let mut t = rng.gen_range(0.1..0.5); // Varied start time
-    let mut chord_index = 0;
-    let mut ascending = variation.style_choices[2] % 2 == 0;
+    // Get melodic contour pattern from seed
+    let phrase_len = variation.phrase_length as usize;
+    let contour = variation.get_contour(phrase_len);
+
+    // Start at a seed-determined scale position
+    let mut scale_index = (variation.scale_offset as usize) % scale.len();
+    let mut t = rng.gen_range(0.1..0.5);
+    let mut phrase_position = 0;
+    let mut phrase_count = 0;
+
+    // Track the phrase for potential repetition/transformation
+    let mut current_phrase: Vec<(u8, f64, u8, f64)> = Vec::new(); // (pitch, dur, vel, time)
 
     while t < beats - 0.5 {
-        let base_pitch = chord[chord_index] as i8 + octave_offset;
-        let pitch = base_pitch as u8;
-        let velocity = variation.adjust_velocity(40 + rng.gen_range(0..20));
-
-        notes.push(Note::new(pitch, note_duration, velocity, t));
-
-        // Movement pattern varies
-        if ascending {
-            chord_index += 1;
-            if chord_index >= chord.len() {
-                chord_index = chord.len() - 2;
-                ascending = false;
-            }
-        } else if chord_index == 0 {
-            ascending = true;
-            chord_index = 1;
-        } else {
-            chord_index -= 1;
+        // Check for rest
+        if variation.should_rest(rng) && phrase_position > 0 {
+            t += base_spacing * variation.density_factor;
+            continue;
         }
 
-        t += note_spacing * variation.density_factor;
+        // Calculate pitch from scale
+        let interval = scale[scale_index];
+        let octave_adjust = base_octave + (scale_index as i8 / scale.len() as i8) * 12;
+        let pitch = ((root as i8 + interval as i8 + octave_adjust) as u8).clamp(36, 96);
+
+        // Vary duration slightly
+        let duration = base_duration * rng.gen_range(0.8..1.2);
+        let velocity = variation.adjust_velocity(40 + rng.gen_range(0..20));
+
+        notes.push(Note::new(pitch, duration, velocity, t));
+        current_phrase.push((pitch, duration, velocity, t));
+
+        // Apply contour pattern to determine next note
+        let direction = contour[phrase_position % contour.len()];
+        let step = variation.get_interval(rng) as i8;
+
+        match direction {
+            1 => {
+                // Move up
+                scale_index = (scale_index + step as usize) % (scale.len() * 2);
+            }
+            -1 => {
+                // Move down
+                if scale_index >= step as usize {
+                    scale_index -= step as usize;
+                } else {
+                    scale_index = 0;
+                }
+            }
+            _ => {
+                // Stay on same note or small variation
+                if rng.gen_bool(0.3) {
+                    scale_index = (scale_index + 1) % scale.len();
+                }
+            }
+        }
+
+        // Keep scale_index in valid range
+        scale_index = scale_index % (scale.len() * 2);
+        if scale_index >= scale.len() {
+            scale_index = scale_index % scale.len();
+        }
+
+        phrase_position += 1;
+        t += base_spacing * variation.density_factor;
+
+        // End of phrase - possibly transform and repeat
+        if phrase_position >= phrase_len && !current_phrase.is_empty() {
+            phrase_count += 1;
+
+            // Apply phrase transformation based on seed
+            if phrase_count <= 2 && variation.phrase_transform < 4 && t < beats - 2.0 {
+                match variation.phrase_transform {
+                    0 => {
+                        // Repeat phrase exactly
+                        for (p, d, v, _) in &current_phrase {
+                            if t >= beats - 0.5 { break; }
+                            notes.push(Note::new(*p, *d, *v, t));
+                            t += base_spacing * variation.density_factor;
+                        }
+                    }
+                    1 => {
+                        // Invert phrase (mirror pitches)
+                        let mid_pitch = current_phrase.iter().map(|(p, _, _, _)| *p as i16).sum::<i16>()
+                            / current_phrase.len() as i16;
+                        for (p, d, v, _) in &current_phrase {
+                            if t >= beats - 0.5 { break; }
+                            let inverted = (2 * mid_pitch - *p as i16).clamp(36, 96) as u8;
+                            notes.push(Note::new(inverted, *d, *v, t));
+                            t += base_spacing * variation.density_factor;
+                        }
+                    }
+                    2 => {
+                        // Play faster (double speed)
+                        for (p, d, v, _) in &current_phrase {
+                            if t >= beats - 0.5 { break; }
+                            notes.push(Note::new(*p, d * 0.5, *v, t));
+                            t += base_spacing * variation.density_factor * 0.5;
+                        }
+                    }
+                    3 => {
+                        // Play slower (half speed)
+                        for (p, d, v, _) in current_phrase.iter().take(phrase_len / 2) {
+                            if t >= beats - 0.5 { break; }
+                            notes.push(Note::new(*p, d * 2.0, *v, t));
+                            t += base_spacing * variation.density_factor * 2.0;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+
+            // Reset for next phrase
+            current_phrase.clear();
+            phrase_position = 0;
+
+            // Add a rest between phrases sometimes
+            if rng.gen_bool(0.4) {
+                t += base_spacing;
+            }
+        }
     }
 
     NoteSequence::new(notes, instrument, tempo)
@@ -224,7 +324,7 @@ fn generate_bass_drone(
     NoteSequence::new(notes, instrument, tempo)
 }
 
-/// Generate high shimmer notes
+/// Generate high shimmer notes with melodic variation
 fn generate_high_shimmer(
     config: &PresetConfig,
     variation: &PresetVariation,
@@ -236,7 +336,7 @@ fn generate_high_shimmer(
     let scale = config.key.scale_intervals();
     let mut notes = Vec::new();
 
-    // Sparse high notes
+    // Sparse high notes - count varies by seed
     let num_notes = (2.0 + beats / 3.0 * variation.note_count_factor) as usize;
 
     let mut positions: Vec<f64> = (0..num_notes)
@@ -244,16 +344,45 @@ fn generate_high_shimmer(
         .collect();
     positions.sort_by(|a, b| a.partial_cmp(b).unwrap());
 
-    for pos in positions {
-        let interval = scale[rng.gen_range(0..scale.len())];
-        let pitch = root + 24 + interval; // Two octaves up
+    // Use contour for melodic movement in shimmer
+    let contour = variation.get_contour(num_notes);
+    let mut scale_idx = (variation.scale_offset as usize) % scale.len();
+
+    // Octave varies by seed
+    let octave_up: u8 = match variation.style_choices[3] % 3 {
+        0 => 24, // Two octaves
+        1 => 12, // One octave
+        _ => 36, // Three octaves (very high)
+    };
+
+    for (i, pos) in positions.iter().enumerate() {
+        // Skip some notes for rests
+        if variation.should_rest(rng) {
+            continue;
+        }
+
+        let interval = scale[scale_idx % scale.len()];
+        let pitch = (root + octave_up + interval).min(108); // Cap at high C
         let vel = variation.adjust_velocity(25 + rng.gen_range(0..15));
         let dur = rng.gen_range(1.0_f64..2.0_f64);
-        notes.push(Note::new(pitch, dur, vel, pos));
+        notes.push(Note::new(pitch, dur, vel, *pos));
+
+        // Move scale position based on contour
+        let direction = contour[i % contour.len()];
+        match direction {
+            1 => scale_idx = (scale_idx + 1) % scale.len(),
+            -1 => scale_idx = if scale_idx > 0 { scale_idx - 1 } else { scale.len() - 1 },
+            _ => {}
+        }
     }
 
-    // Celesta or glockenspiel
-    let instrument = if rng.gen_bool(0.6) { 8 } else { 9 };
+    // Instrument varies by seed
+    let instrument = match variation.style_choices[4] % 4 {
+        0 => 8,   // Celesta
+        1 => 9,   // Glockenspiel
+        2 => 11,  // Vibraphone
+        _ => 14,  // Tubular Bells
+    };
     NoteSequence::new(notes, instrument, tempo)
 }
 

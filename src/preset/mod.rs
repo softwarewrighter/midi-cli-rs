@@ -40,6 +40,18 @@ pub struct PresetVariation {
     pub velocity_offset: i8,
     /// Note count multiplier (0.7 to 1.5)
     pub note_count_factor: f64,
+    /// Melodic contour pattern (determines up/down sequences)
+    pub contour_pattern: u8,
+    /// Rest probability (0.0 to 0.4)
+    pub rest_probability: f64,
+    /// Phrase length in notes (3-8)
+    pub phrase_length: u8,
+    /// Phrase transformation (0=repeat, 1=invert, 2=faster, 3=slower, 4=transpose)
+    pub phrase_transform: u8,
+    /// Starting scale degree offset (0-6)
+    pub scale_offset: u8,
+    /// Interval preference (0=stepwise, 1=small leaps, 2=large leaps, 3=mixed)
+    pub interval_style: u8,
 }
 
 impl PresetVariation {
@@ -76,6 +88,66 @@ impl PresetVariation {
             density_factor: rng.gen_range(0.6..1.4),
             velocity_offset: rng.gen_range(-15..=15),
             note_count_factor: rng.gen_range(0.7..1.4),
+            // Melodic variation parameters
+            contour_pattern: rng.gen_range(0..=15), // 16 different contour patterns
+            rest_probability: rng.gen_range(0.0..0.35),
+            phrase_length: rng.gen_range(3..=8),
+            phrase_transform: rng.gen_range(0..=4),
+            scale_offset: rng.gen_range(0..=6),
+            interval_style: rng.gen_range(0..=3),
+        }
+    }
+
+    /// Get melodic contour for a phrase (sequence of up/down/same movements)
+    /// Returns an array of direction changes: 1=up, 0=same, -1=down
+    pub fn get_contour(&self, phrase_len: usize) -> Vec<i8> {
+        // 16 different contour patterns based on contour_pattern
+        let patterns: &[&[i8]] = &[
+            &[1, 1, 1, -1],           // up up up down
+            &[1, -1, 1, -1],          // alternating
+            &[-1, -1, -1, 1],         // down down down up
+            &[1, 1, -1, -1],          // arch
+            &[-1, -1, 1, 1],          // valley
+            &[1, 0, 1, -1],           // up hold up down
+            &[-1, 1, -1, 1],          // zigzag down-first
+            &[1, 1, 1, 1],            // ascending
+            &[-1, -1, -1, -1],        // descending
+            &[0, 1, 0, -1],           // hold-centered
+            &[1, -1, -1, 1],          // up down down up
+            &[-1, 1, 1, -1],          // down up up down
+            &[1, 1, -1, 1],           // mostly up
+            &[-1, -1, 1, -1],         // mostly down
+            &[1, 0, -1, 0],           // sparse movement
+            &[0, 1, 1, -1, -1, 0],    // bell curve
+        ];
+
+        let pattern = patterns[(self.contour_pattern as usize) % patterns.len()];
+        let mut result = Vec::with_capacity(phrase_len);
+        for i in 0..phrase_len {
+            result.push(pattern[i % pattern.len()]);
+        }
+        result
+    }
+
+    /// Check if this position should be a rest
+    pub fn should_rest(&self, rng: &mut impl Rng) -> bool {
+        rng.gen_bool(self.rest_probability)
+    }
+
+    /// Get interval size based on interval_style
+    pub fn get_interval(&self, rng: &mut impl Rng) -> i8 {
+        match self.interval_style {
+            0 => rng.gen_range(1..=2),  // stepwise (1-2 scale degrees)
+            1 => rng.gen_range(1..=3),  // small leaps
+            2 => rng.gen_range(2..=5),  // large leaps
+            _ => {
+                // mixed - sometimes small, sometimes large
+                if rng.gen_bool(0.6) {
+                    rng.gen_range(1..=2)
+                } else {
+                    rng.gen_range(3..=5)
+                }
+            }
         }
     }
 

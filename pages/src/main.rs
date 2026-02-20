@@ -114,140 +114,190 @@ fn app() -> Html {
 fn render_tab_content(tab: Tab) -> Html {
     match tab {
         Tab::Suspense => html! {
-            <ExampleCard
-                title="Suspense Mood"
-                description="Tense, atmospheric music perfect for thriller scenes or building anticipation."
-                command="midi-cli-rs preset -m suspense -d 5 --seed 20260220 -k Am --intensity 60 -t 70 -o output.wav"
-                audio_src="audio/suspense-demo.wav"
-                params={vec![
-                    ("Mood", "suspense"),
-                    ("Duration", "5s"),
-                    ("Key", "A minor"),
-                    ("Intensity", "60%"),
-                    ("Tempo", "70 BPM"),
-                ]}
-            />
+            <>
+                <p class="seed-note">{"Each seed produces a unique variation. Listen to all three:"}</p>
+                <ExampleCard
+                    title="Suspense - Seed 1"
+                    description="Tense, atmospheric music perfect for thriller scenes."
+                    command="midi-cli-rs preset -m suspense -d 5 --seed 1 -o output.wav"
+                    audio_src="audio/suspense-1.wav"
+                    params={vec![("Seed", "1")]}
+                />
+                <ExampleCard
+                    title="Suspense - Seed 2"
+                    description="Different melodic contour and instrument choices."
+                    command="midi-cli-rs preset -m suspense -d 5 --seed 2 -o output.wav"
+                    audio_src="audio/suspense-2.wav"
+                    params={vec![("Seed", "2")]}
+                />
+                <ExampleCard
+                    title="Suspense - Seed 3"
+                    description="Another unique variation with different phrasing."
+                    command="midi-cli-rs preset -m suspense -d 5 --seed 3 -o output.wav"
+                    audio_src="audio/suspense-3.wav"
+                    params={vec![("Seed", "3")]}
+                />
+            </>
         },
         Tab::Eerie => html! {
-            <ExampleCard
-                title="Eerie Mood"
-                description="Unsettling, mysterious music for horror or supernatural themes."
-                command="midi-cli-rs preset -m eerie -d 5 --seed 20260220 -k Dm --intensity 50 -t 60 -o output.wav"
-                audio_src="audio/eerie-demo.wav"
-                params={vec![
-                    ("Mood", "eerie"),
-                    ("Duration", "5s"),
-                    ("Key", "D minor"),
-                    ("Intensity", "50%"),
-                    ("Tempo", "60 BPM"),
-                ]}
-            />
+            <>
+                <p class="seed-note">{"Each seed produces a unique variation. Listen to all three:"}</p>
+                <ExampleCard
+                    title="Eerie - Seed 1"
+                    description="Unsettling, mysterious music for horror themes."
+                    command="midi-cli-rs preset -m eerie -d 5 --seed 1 -o output.wav"
+                    audio_src="audio/eerie-1.wav"
+                    params={vec![("Seed", "1")]}
+                />
+                <ExampleCard
+                    title="Eerie - Seed 2"
+                    description="Different dissonant patterns and textures."
+                    command="midi-cli-rs preset -m eerie -d 5 --seed 2 -o output.wav"
+                    audio_src="audio/eerie-2.wav"
+                    params={vec![("Seed", "2")]}
+                />
+                <ExampleCard
+                    title="Eerie - Seed 3"
+                    description="Unique bell tones and movement."
+                    command="midi-cli-rs preset -m eerie -d 5 --seed 3 -o output.wav"
+                    audio_src="audio/eerie-3.wav"
+                    params={vec![("Seed", "3")]}
+                />
+            </>
         },
         Tab::Upbeat => html! {
-            <ExampleCard
-                title="Upbeat Mood"
-                description="Energetic, positive music for celebrations or exciting moments."
-                command="midi-cli-rs preset -m upbeat -d 5 --seed 20260220 -k C --intensity 70 -t 120 -o output.wav"
-                audio_src="audio/upbeat-demo.wav"
-                params={vec![
-                    ("Mood", "upbeat"),
-                    ("Duration", "5s"),
-                    ("Key", "C major"),
-                    ("Intensity", "70%"),
-                    ("Tempo", "120 BPM"),
-                ]}
-            />
+            <>
+                <p class="seed-note">{"Each seed produces a unique variation. Listen to all three:"}</p>
+                <ExampleCard
+                    title="Upbeat - Seed 1"
+                    description="Energetic, positive music for celebrations."
+                    command="midi-cli-rs preset -m upbeat -d 5 --seed 1 -o output.wav"
+                    audio_src="audio/upbeat-1.wav"
+                    params={vec![("Seed", "1")]}
+                />
+                <ExampleCard
+                    title="Upbeat - Seed 2"
+                    description="Different rhythm pattern and bass line."
+                    command="midi-cli-rs preset -m upbeat -d 5 --seed 2 -o output.wav"
+                    audio_src="audio/upbeat-2.wav"
+                    params={vec![("Seed", "2")]}
+                />
+                <ExampleCard
+                    title="Upbeat - Seed 3"
+                    description="Another variation with unique melody hints."
+                    command="midi-cli-rs preset -m upbeat -d 5 --seed 3 -o output.wav"
+                    audio_src="audio/upbeat-3.wav"
+                    params={vec![("Seed", "3")]}
+                />
+            </>
         },
         Tab::Calm => html! {
-            <ExampleCard
-                title="Calm Mood"
-                description="Peaceful, relaxing music for meditation or gentle scenes."
-                command="midi-cli-rs preset -m calm -d 5 --seed 20260220 -k G --intensity 30 -t 72 -o output.wav"
-                audio_src="audio/calm-demo.wav"
-                params={vec![
-                    ("Mood", "calm"),
-                    ("Duration", "5s"),
-                    ("Key", "G major"),
-                    ("Intensity", "30%"),
-                    ("Tempo", "72 BPM"),
-                ]}
-            />
+            <>
+                <p class="seed-note">{"Each seed produces a unique variation. Listen to all three:"}</p>
+                <ExampleCard
+                    title="Calm - Seed 1"
+                    description="Peaceful arpeggios with ascending contour."
+                    command="midi-cli-rs preset -m calm -d 5 --seed 1 -o output.wav"
+                    audio_src="audio/calm-1.wav"
+                    params={vec![("Seed", "1")]}
+                />
+                <ExampleCard
+                    title="Calm - Seed 2"
+                    description="Different melodic pattern with phrase inversion."
+                    command="midi-cli-rs preset -m calm -d 5 --seed 2 -o output.wav"
+                    audio_src="audio/calm-2.wav"
+                    params={vec![("Seed", "2")]}
+                />
+                <ExampleCard
+                    title="Calm - Seed 3"
+                    description="Varied rhythm and interval leaps."
+                    command="midi-cli-rs preset -m calm -d 5 --seed 3 -o output.wav"
+                    audio_src="audio/calm-3.wav"
+                    params={vec![("Seed", "3")]}
+                />
+            </>
         },
         Tab::Ambient => html! {
-            <ExampleCard
-                title="Ambient Mood"
-                description="Ethereal, atmospheric soundscapes for background ambiance."
-                command="midi-cli-rs preset -m ambient -d 8 --seed 20260220 -k Em --intensity 40 -t 60 -o output.wav"
-                audio_src="audio/ambient-demo.wav"
-                params={vec![
-                    ("Mood", "ambient"),
-                    ("Duration", "8s"),
-                    ("Key", "E minor"),
-                    ("Intensity", "40%"),
-                    ("Tempo", "60 BPM"),
-                ]}
-            />
+            <>
+                <p class="seed-note">{"Each seed produces a unique variation. Listen to all three:"}</p>
+                <ExampleCard
+                    title="Ambient - Seed 1"
+                    description="Ethereal soundscape with sustained drones."
+                    command="midi-cli-rs preset -m ambient -d 5 --seed 1 -o output.wav"
+                    audio_src="audio/ambient-1.wav"
+                    params={vec![("Seed", "1")]}
+                />
+                <ExampleCard
+                    title="Ambient - Seed 2"
+                    description="Different texture with sporadic tones."
+                    command="midi-cli-rs preset -m ambient -d 5 --seed 2 -o output.wav"
+                    audio_src="audio/ambient-2.wav"
+                    params={vec![("Seed", "2")]}
+                />
+                <ExampleCard
+                    title="Ambient - Seed 3"
+                    description="Unique pulsing patterns and sub-bass."
+                    command="midi-cli-rs preset -m ambient -d 5 --seed 3 -o output.wav"
+                    audio_src="audio/ambient-3.wav"
+                    params={vec![("Seed", "3")]}
+                />
+            </>
         },
         Tab::Jazz => html! {
-            <ExampleCard
-                title="Jazz Mood"
-                description="Smooth, sophisticated jazz with complex harmonies and swing feel."
-                command="midi-cli-rs preset -m jazz -d 6 --seed 20260220 -k F --intensity 50 -t 100 -o output.wav"
-                audio_src="audio/jazz-demo.wav"
-                params={vec![
-                    ("Mood", "jazz"),
-                    ("Duration", "6s"),
-                    ("Key", "F major"),
-                    ("Intensity", "50%"),
-                    ("Tempo", "100 BPM"),
-                ]}
-            />
+            <>
+                <p class="seed-note">{"Each seed produces a unique variation. Listen to all three:"}</p>
+                <ExampleCard
+                    title="Jazz - Seed 1"
+                    description="Walking bass with swing feel."
+                    command="midi-cli-rs preset -m jazz -d 5 --seed 1 -o output.wav"
+                    audio_src="audio/jazz-1.wav"
+                    params={vec![("Seed", "1")]}
+                />
+                <ExampleCard
+                    title="Jazz - Seed 2"
+                    description="Different voicings and comping patterns."
+                    command="midi-cli-rs preset -m jazz -d 5 --seed 2 -o output.wav"
+                    audio_src="audio/jazz-2.wav"
+                    params={vec![("Seed", "2")]}
+                />
+                <ExampleCard
+                    title="Jazz - Seed 3"
+                    description="Unique flourishes and grace notes."
+                    command="midi-cli-rs preset -m jazz -d 5 --seed 3 -o output.wav"
+                    audio_src="audio/jazz-3.wav"
+                    params={vec![("Seed", "3")]}
+                />
+            </>
         },
         Tab::Melodies => html! {
             <>
                 <ExampleCard
                     title="Piano - Nursery Rhyme"
-                    description="A familiar melody inspired by 'Twinkle Twinkle Little Star' (public domain)."
-                    command="midi-cli-rs generate --notes \"C4:1:80@0,C4:1:80@1,G4:1:85@2,G4:1:85@3,A4:1:90@4,A4:1:90@5,G4:2:85@6,...\" -i piano -t 110 -o output.wav"
+                    description="'Twinkle Twinkle' inspired melody (public domain)."
+                    command="midi-cli-rs generate --notes \"C4:1:80@0,C4:1:80@1,G4:1:85@2,...\" -i piano -t 110 -o output.wav"
                     audio_src="audio/melody-piano.wav"
-                    params={vec![
-                        ("Instrument", "piano"),
-                        ("Style", "Classical / Nursery"),
-                        ("Tempo", "110 BPM"),
-                    ]}
+                    params={vec![("Instrument", "piano"), ("Tempo", "110 BPM")]}
                 />
                 <ExampleCard
                     title="Strings - Lyrical Sweep"
-                    description="A sweeping, expressive melody with long sustained notes."
-                    command="midi-cli-rs generate --notes \"E4:3:70@0,G4:1:75@3,A4:2:80@4,G4:2:75@6,E4:2:70@8,...\" -i strings -t 66 -o output.wav"
+                    description="Sweeping melody with sustained notes."
+                    command="midi-cli-rs generate --notes \"E4:3:70@0,G4:1:75@3,...\" -i strings -t 66 -o output.wav"
                     audio_src="audio/melody-strings.wav"
-                    params={vec![
-                        ("Instrument", "strings"),
-                        ("Style", "Romantic / Cinematic"),
-                        ("Tempo", "66 BPM"),
-                    ]}
+                    params={vec![("Instrument", "strings"), ("Tempo", "66 BPM")]}
                 />
                 <ExampleCard
                     title="Bass - Walking Groove"
-                    description="A funky walking bass line with rhythmic drive."
-                    command="midi-cli-rs generate --notes \"E2:1:90@0,G2:1:85@1,A2:1:90@2,B2:1:85@3,C3:1:95@4,...\" -i bass -t 128 -o output.wav"
+                    description="Funky walking bass line."
+                    command="midi-cli-rs generate --notes \"E2:1:90@0,G2:1:85@1,...\" -i bass -t 128 -o output.wav"
                     audio_src="audio/melody-bass.wav"
-                    params={vec![
-                        ("Instrument", "bass"),
-                        ("Style", "Funk / Jazz"),
-                        ("Tempo", "128 BPM"),
-                    ]}
+                    params={vec![("Instrument", "bass"), ("Tempo", "128 BPM")]}
                 />
                 <ExampleCard
                     title="Cello - Deep Expression"
-                    description="A slow, emotional melody showcasing the cello's rich low register."
-                    command="midi-cli-rs generate --notes \"G2:4:75@0,B2:2:80@4,D3:2:85@6,G3:4:90@8,...\" -i cello -t 54 -o output.wav"
+                    description="Slow, emotional cello melody."
+                    command="midi-cli-rs generate --notes \"G2:4:75@0,B2:2:80@4,...\" -i cello -t 54 -o output.wav"
                     audio_src="audio/melody-cello.wav"
-                    params={vec![
-                        ("Instrument", "cello"),
-                        ("Style", "Classical / Emotional"),
-                        ("Tempo", "54 BPM"),
-                    ]}
+                    params={vec![("Instrument", "cello"), ("Tempo", "54 BPM")]}
                 />
             </>
         },
