@@ -238,7 +238,7 @@ pub fn preset_editor(props: &PresetEditorProps) -> Html {
                 <div class="form-row">
                     <div class="form-group">
                         <label for="mood">{"Mood"}</label>
-                        <select id="mood" onchange={on_mood_change}>
+                        <select id="mood" key={form.mood.clone()} onchange={on_mood_change}>
                             { for MOODS.iter().map(|m| {
                                 let is_selected = form.mood == *m;
                                 html! {
@@ -250,7 +250,7 @@ pub fn preset_editor(props: &PresetEditorProps) -> Html {
 
                     <div class="form-group">
                         <label for="key">{"Key (optional)"}</label>
-                        <select id="key" onchange={on_key_change}>
+                        <select id="key" key={form.key.clone()} onchange={on_key_change}>
                             <option value="" selected={form.key.is_empty()}>{"Default"}</option>
                             { for KEYS.iter().map(|k| {
                                 let is_selected = form.key == *k;
