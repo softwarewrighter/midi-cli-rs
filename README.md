@@ -135,7 +135,7 @@ Create mood-based compositions with adjustable parameters:
 - **Mood, Key, Duration, Intensity, Tempo** - Core composition settings
 - **Seed** - Use 0 for random, or click the clock button to fill with ms-since-epoch for unique reproducible results
 
-![Presets Tab](images/screenshot-presets.png?ts=1771541845000)
+![Presets Tab](images/screenshot-presets.png?ts=1771545798000)
 
 ### Melodies Tab
 Compose note-by-note with keyboard shortcuts:
@@ -146,7 +146,7 @@ Compose note-by-note with keyboard shortcuts:
 - `+` / `-` - Change octave
 - `Esc` - Exit note editing mode
 
-![Melodies Tab](images/screenshot-melodies.png?ts=1771541845000)
+![Melodies Tab](images/screenshot-melodies.png?ts=1771545798000)
 
 ## Documentation
 
