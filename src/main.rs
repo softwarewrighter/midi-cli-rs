@@ -525,6 +525,7 @@ fn render_wav(
     } else {
         find_soundfont()?
     };
+    eprintln!("Using SoundFont: {}", sf.display());
 
     // Determine output path (use temp file if trimming needed)
     let needs_trim = target_duration.is_some();
