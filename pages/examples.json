@@ -1,0 +1,72 @@
+{
+  "presets": [
+    {
+      "id": "suspense-demo",
+      "mood": "suspense",
+      "duration": 5,
+      "seed": 20260220,
+      "key": "Am",
+      "intensity": 60,
+      "tempo": 70
+    },
+    {
+      "id": "eerie-demo",
+      "mood": "eerie",
+      "duration": 5,
+      "seed": 20260220,
+      "key": "Dm",
+      "intensity": 50,
+      "tempo": 60
+    },
+    {
+      "id": "upbeat-demo",
+      "mood": "upbeat",
+      "duration": 5,
+      "seed": 20260220,
+      "key": "C",
+      "intensity": 70,
+      "tempo": 120
+    },
+    {
+      "id": "calm-demo",
+      "mood": "calm",
+      "duration": 5,
+      "seed": 20260220,
+      "key": "G",
+      "intensity": 30,
+      "tempo": 72
+    },
+    {
+      "id": "ambient-demo",
+      "mood": "ambient",
+      "duration": 8,
+      "seed": 20260220,
+      "key": "Em",
+      "intensity": 40,
+      "tempo": 60
+    },
+    {
+      "id": "jazz-demo",
+      "mood": "jazz",
+      "duration": 6,
+      "seed": 20260220,
+      "key": "F",
+      "intensity": 50,
+      "tempo": 100
+    }
+  ],
+  "melodies": [
+    {
+      "id": "melody-piano",
+      "notes": "C4:1:80@0,E4:1:80@1,G4:1:80@2,C5:1:90@3,G4:1:80@4,E4:1:80@5,C4:1:80@6,D4:1:75@7,F4:1:75@8,A4:1:75@9,D5:1:85@10,A4:1:75@11,F4:1:75@12,D4:1:75@13,C4:2:90@14",
+      "instrument": "piano",
+      "tempo": 100
+    },
+    {
+      "id": "melody-strings",
+      "notes": "G3:2:70@0,B3:1:70@2,D4:1:70@3,G4:2:80@4,D4:1:70@6,B3:1:70@7,G3:2:70@8,A3:2:70@10,C4:1:70@12,E4:1:70@13,A4:2:80@14,E4:1:70@16,C4:1:70@17,A3:2:70@18,G3:4:85@20",
+      "instrument": "strings",
+      "tempo": 80
+    }
+  ]
+}

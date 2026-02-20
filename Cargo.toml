@@ -1,5 +1,5 @@
 [workspace]
-exclude = ["web"]
+exclude = ["web", "pages"]
 
 [package]
 name = "midi-cli-rs"

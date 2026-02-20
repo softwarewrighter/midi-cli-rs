@@ -9,6 +9,10 @@
 # Web frontend build artifacts
 /web/dist/
 
+# Demo page build artifacts
+/pages/dist/
+/pages/target/
+
 # SoundFont files (large, download separately)
 /soundfonts/*.sf2
 *.sf2
@@ -21,6 +25,9 @@
 *.mid
 *.wav
 !preview/index.html
+
+# Demo page audio files (committed for GitHub Pages)
+!pages/audio/*.wav
 
 # Binary and build artifacts
 *.exe

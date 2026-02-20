@@ -1,0 +1,11 @@
+[build]
+target = "index.html"
+dist = "dist"
+public_url = "/midi-cli-rs/"
+
+[watch]
+watch = ["src", "index.html"]
+
+[serve]
+port = 8081
+
