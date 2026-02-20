@@ -6,8 +6,8 @@
     <title>MIDI CLI - Demo</title>
     
 <script type="module">
-import init, * as bindings from '/midi-cli-rs/midi-cli-demo-565b412f278623.js';
-const wasm = await init({ module_or_path: '/midi-cli-rs/midi-cli-demo-565b412f278623_bg.wasm' });
+import init, * as bindings from '/midi-cli-rs/midi-cli-demo-f333a815b13b4f42.js';
+const wasm = await init({ module_or_path: '/midi-cli-rs/midi-cli-demo-f333a815b13b4f42_bg.wasm' });
 
 
 window.wasmBindings = bindings;
@@ -175,9 +175,12 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
 
         .command-block code {
             font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             color: var(--success);
-            word-break: break-all;
+            word-break: break-word;
+            white-space: pre-wrap;
+            line-height: 1.5;
+            display: block;
         }
 
         .copy-btn {
@@ -311,7 +314,7 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
             }
         }
     </style>
-<link rel="modulepreload" href="/midi-cli-rs/midi-cli-demo-565b412f278623.js" crossorigin="anonymous" integrity="sha384-yMPzIuGXTqUqid2SbN9cWM+p7/QJNChwS6+CaEMPPlZKyvYq/pzqltxub3w7uY9R"><link rel="preload" href="/midi-cli-rs/midi-cli-demo-565b412f278623_bg.wasm" crossorigin="anonymous" integrity="sha384-GkaAC0SWoe0QluYZyKNBOtsz1gi1JMjNr6LBExoovUN7ANn/CNeqRs9DzqJhNjhs" as="fetch" type="application/wasm"></head>
+<link rel="modulepreload" href="/midi-cli-rs/midi-cli-demo-f333a815b13b4f42.js" crossorigin="anonymous" integrity="sha384-yMPzIuGXTqUqid2SbN9cWM+p7/QJNChwS6+CaEMPPlZKyvYq/pzqltxub3w7uY9R"><link rel="preload" href="/midi-cli-rs/midi-cli-demo-f333a815b13b4f42_bg.wasm" crossorigin="anonymous" integrity="sha384-2RQYD7PIlBaCdm+YJNLXib7K2bBqIgyTr7QAprNOT3qjbfI6Ojte2L05W9oA/+Rk" as="fetch" type="application/wasm"></head>
 <body>
 </body>
 </html>
