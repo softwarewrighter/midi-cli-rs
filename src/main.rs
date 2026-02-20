@@ -201,6 +201,14 @@ enum Commands {
     /// List available mood presets with descriptions
     Moods,
 
+    /// List instruments available in a SoundFont file (requires FluidSynth)
+    #[command(name = "soundfont-instruments")]
+    SoundfontInstruments {
+        /// Path to SoundFont file (auto-detected if not specified)
+        #[arg(short, long)]
+        soundfont: Option<PathBuf>,
+    },
+
     /// Show information about a MIDI file (format, tracks, events)
     Info {
         /// MIDI file to inspect
@@ -480,6 +488,57 @@ fn run(command: Commands) -> Result<(), Box<dyn std::error::Error>> {
             );
             println!("\nUsage: midi-cli-rs preset --mood suspense --duration 5 -o out.wav");
             println!("       midi-cli-rs preset -m jazz -d 10 --key Bb --seed 42 -o nightclub.wav");
+            Ok(())
+        }
+
+        Commands::SoundfontInstruments { soundfont } => {
+            // Find soundfont to use
+            let sf_path = match soundfont {
+                Some(p) => {
+                    if !p.exists() {
+                        return Err(format!("SoundFont not found: {}", p.display()).into());
+                    }
+                    p
+                }
+                None => find_soundfont()?,
+            };
+
+            println!("SoundFont: {}\n", sf_path.display());
+            println!("{:<8} {:<8} NAME", "BANK", "PROG");
+            println!("{:-<40}", "");
+
+            // Use FluidSynth to list instruments via shell
+            // FluidSynth needs a pseudo-terminal for interactive mode, so we use bash heredoc
+            let output = Command::new("bash")
+                .args(["-c", &format!(
+                    r#"fluidsynth -q "{}" <<< "inst 1
+quit""#,
+                    sf_path.display()
+                )])
+                .stdout(std::process::Stdio::piped())
+                .stderr(std::process::Stdio::null())
+                .output();
+
+            match output {
+                Ok(output) => {
+                    let stdout = String::from_utf8_lossy(&output.stdout);
+                    for line in stdout.lines() {
+                        // Parse lines like "000-000 Stereo Grand"
+                        if line.starts_with(|c: char| c.is_ascii_digit()) {
+                            if let Some((bank_prog, name)) = line.split_once(' ') {
+                                if let Some((bank, prog)) = bank_prog.split_once('-') {
+                                    println!("{:<8} {:<8} {}", bank, prog, name);
+                                }
+                            }
+                        }
+                    }
+                    println!("\nUse program number with -i/--instrument option.");
+                }
+                Err(e) => {
+                    return Err(format!("FluidSynth not found: {}\nInstall with: brew install fluid-synth", e).into());
+                }
+            }
+
             Ok(())
         }
 
