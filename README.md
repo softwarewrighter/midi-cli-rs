@@ -124,14 +124,17 @@ ffmpeg -i track1.wav -i track2.wav -filter_complex amix=inputs=2 combined.wav
 ffmpeg -i input.wav -af "afade=t=in:d=0.5,afade=t=out:st=4:d=1" faded.wav
 ```
 
-## Web UI
+## Web UI (Local)
 
-A browser-based interface for creating and managing music presets and melodies.
+A full-featured browser interface for creating and managing music presets and melodies. **Requires running locally** (not available in the online demo above).
 
 ```bash
 # Build and run the web server
 cargo build --release
-./target/release/midi-cli-rs serve  # Starts on http://127.0.0.1:3105
+./target/release/midi-cli-rs serve
+
+# Open in browser
+open http://127.0.0.1:3105
 ```
 
 ### Presets Tab

@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'pages/**'
+      - 'pages/dist/**'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 
@@ -18,22 +18,13 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: wasm32-unknown-unknown
-
-      - name: Install Trunk
-        run: cargo install trunk
-
-      - name: Build demo page
-        working-directory: pages
-        run: trunk build --release
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -43,13 +34,6 @@ jobs:
         with:
           path: pages/dist
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

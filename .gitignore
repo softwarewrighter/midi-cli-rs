@@ -9,8 +9,7 @@
 # Web frontend build artifacts
 /web/dist/
 
-# Demo page build artifacts
-/pages/dist/
+# Demo page build artifacts (dist is committed for fast deployment)
 /pages/target/
 
 # SoundFont files (large, download separately)
