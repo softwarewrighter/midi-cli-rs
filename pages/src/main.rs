@@ -206,25 +206,47 @@ fn render_tab_content(tab: Tab) -> Html {
         Tab::Melodies => html! {
             <>
                 <ExampleCard
-                    title="Piano Melody"
-                    description="A C major arpeggio pattern with a D minor passing phrase."
-                    command="midi-cli-rs generate --notes \"C4:1:80@0,E4:1:80@1,G4:1:80@2,C5:1:90@3,G4:1:80@4,E4:1:80@5,C4:1:80@6,D4:1:75@7,F4:1:75@8,A4:1:75@9,D5:1:85@10,A4:1:75@11,F4:1:75@12,D4:1:75@13,C4:2:90@14\" -i piano -t 100 -o output.wav"
+                    title="Piano - Nursery Rhyme"
+                    description="A familiar melody inspired by 'Twinkle Twinkle Little Star' (public domain)."
+                    command="midi-cli-rs generate --notes \"C4:1:80@0,C4:1:80@1,G4:1:85@2,G4:1:85@3,A4:1:90@4,A4:1:90@5,G4:2:85@6,...\" -i piano -t 110 -o output.wav"
                     audio_src="audio/melody-piano.wav"
                     params={vec![
                         ("Instrument", "piano"),
-                        ("Pattern", "C maj arpeggio + D min"),
-                        ("Tempo", "100 BPM"),
+                        ("Style", "Classical / Nursery"),
+                        ("Tempo", "110 BPM"),
                     ]}
                 />
                 <ExampleCard
-                    title="Strings Melody"
-                    description="A gentle G major progression with Am passing chords."
-                    command="midi-cli-rs generate --notes \"G3:2:70@0,B3:1:70@2,D4:1:70@3,G4:2:80@4,D4:1:70@6,B3:1:70@7,G3:2:70@8,A3:2:70@10,C4:1:70@12,E4:1:70@13,A4:2:80@14,E4:1:70@16,C4:1:70@17,A3:2:70@18,G3:4:85@20\" -i strings -t 80 -o output.wav"
+                    title="Strings - Lyrical Sweep"
+                    description="A sweeping, expressive melody with long sustained notes."
+                    command="midi-cli-rs generate --notes \"E4:3:70@0,G4:1:75@3,A4:2:80@4,G4:2:75@6,E4:2:70@8,...\" -i strings -t 66 -o output.wav"
                     audio_src="audio/melody-strings.wav"
                     params={vec![
                         ("Instrument", "strings"),
-                        ("Pattern", "G maj + A min progression"),
-                        ("Tempo", "80 BPM"),
+                        ("Style", "Romantic / Cinematic"),
+                        ("Tempo", "66 BPM"),
+                    ]}
+                />
+                <ExampleCard
+                    title="Bass - Walking Groove"
+                    description="A funky walking bass line with rhythmic drive."
+                    command="midi-cli-rs generate --notes \"E2:1:90@0,G2:1:85@1,A2:1:90@2,B2:1:85@3,C3:1:95@4,...\" -i bass -t 128 -o output.wav"
+                    audio_src="audio/melody-bass.wav"
+                    params={vec![
+                        ("Instrument", "bass"),
+                        ("Style", "Funk / Jazz"),
+                        ("Tempo", "128 BPM"),
+                    ]}
+                />
+                <ExampleCard
+                    title="Cello - Deep Expression"
+                    description="A slow, emotional melody showcasing the cello's rich low register."
+                    command="midi-cli-rs generate --notes \"G2:4:75@0,B2:2:80@4,D3:2:85@6,G3:4:90@8,...\" -i cello -t 54 -o output.wav"
+                    audio_src="audio/melody-cello.wav"
+                    params={vec![
+                        ("Instrument", "cello"),
+                        ("Style", "Classical / Emotional"),
+                        ("Tempo", "54 BPM"),
                     ]}
                 />
             </>
