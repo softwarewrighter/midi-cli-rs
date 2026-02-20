@@ -126,12 +126,14 @@ A browser-based interface for creating and managing music presets and melodies.
 
 ```bash
 # Build and run the web server
-cargo build --release --features server
-./serve  # Starts on http://127.0.0.1:3105
+cargo build --release
+./target/release/midi-cli-rs serve  # Starts on http://127.0.0.1:3105
 ```
 
 ### Presets Tab
-Create mood-based compositions with adjustable parameters.
+Create mood-based compositions with adjustable parameters:
+- **Mood, Key, Duration, Intensity, Tempo** - Core composition settings
+- **Seed** - Use 0 for random, or click the clock button to fill with ms-since-epoch for unique reproducible results
 
 ![Presets Tab](images/screenshot-presets.png?ts=1771541845000)
 
