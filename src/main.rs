@@ -221,6 +221,16 @@ enum Commands {
         /// Port to listen on
         #[arg(short, long, default_value = "3105")]
         port: u16,
+
+        /// Directory containing static web files (index.html, JS, WASM)
+        /// Defaults to 'static' relative to the executable, then current directory
+        #[arg(short, long)]
+        static_dir: Option<PathBuf>,
+
+        /// Directory for data storage (presets, generated audio)
+        /// Defaults to ~/.midi-cli-rs
+        #[arg(short, long)]
+        data_dir: Option<PathBuf>,
     },
 }
 
@@ -560,9 +570,30 @@ quit""#,
         }
 
         #[cfg(feature = "server")]
-        Commands::Serve { port } => {
+        Commands::Serve { port, static_dir, data_dir } => {
+            // Resolve static directory: explicit > exe-relative > cwd
+            let static_path = static_dir.unwrap_or_else(|| {
+                if let Ok(exe) = std::env::current_exe() {
+                    if let Some(exe_dir) = exe.parent() {
+                        let exe_static = exe_dir.join("static");
+                        if exe_static.exists() {
+                            return exe_static;
+                        }
+                    }
+                }
+                PathBuf::from("static")
+            });
+
+            if !static_path.exists() {
+                return Err(format!(
+                    "Static directory not found: {}\n\
+                     Use --static-dir to specify the path to web UI files",
+                    static_path.display()
+                ).into());
+            }
+
             let rt = tokio::runtime::Runtime::new()?;
-            rt.block_on(server::run_server(port))?;
+            rt.block_on(server::run_server(port, static_path, data_dir))?;
             Ok(())
         }
     }

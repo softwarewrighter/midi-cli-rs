@@ -20,13 +20,19 @@ pub struct AppState {
 
 impl AppState {
     /// Load state from disk or create new state.
-    pub fn load_or_create() -> Result<Arc<Self>, std::io::Error> {
-        let config_dir = dirs_config_dir();
+    /// If data_dir is provided, use it for both storage and generated audio.
+    /// Otherwise, use ~/.midi-cli-rs for storage and ./generated for audio.
+    pub fn load_or_create(data_dir: Option<PathBuf>) -> Result<Arc<Self>, std::io::Error> {
+        let (config_dir, output_dir) = if let Some(dir) = data_dir {
+            let output = dir.join("generated");
+            (dir, output)
+        } else {
+            (dirs_config_dir(), PathBuf::from("generated"))
+        };
         std::fs::create_dir_all(&config_dir)?;
+        std::fs::create_dir_all(&output_dir)?;
 
         let storage_path = config_dir.join("storage.json");
-        let output_dir = PathBuf::from("generated");
-        std::fs::create_dir_all(&output_dir)?;
 
         let (presets, melodies) = if storage_path.exists() {
             let content = std::fs::read_to_string(&storage_path)?;
