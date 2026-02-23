@@ -148,6 +148,7 @@ impl Component for PluginManager {
                         { Self::view_builtin_mood("calm", "G", "Peaceful sustained pads and gentle arpeggios") }
                         { Self::view_builtin_mood("ambient", "Em", "Evolving drone textures with sporadic tones") }
                         { Self::view_builtin_mood("jazz", "F", "Nightclub trio with walking bass and piano") }
+                        { Self::view_builtin_mood("show", "Bb", "Broadway/musical theater with strings and brass") }
                     </div>
                 </div>
             </div>

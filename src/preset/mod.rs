@@ -7,6 +7,7 @@ mod ambient;
 mod calm;
 mod eerie;
 mod jazz;
+mod show;
 mod suspense;
 mod upbeat;
 
@@ -14,6 +15,7 @@ pub use ambient::AmbientPreset;
 pub use calm::CalmPreset;
 pub use eerie::EeriePreset;
 pub use jazz::JazzPreset;
+pub use show::ShowPreset;
 pub use suspense::SuspensePreset;
 pub use upbeat::UpbeatPreset;
 
@@ -287,6 +289,7 @@ pub enum Mood {
     Calm,
     Ambient,
     Jazz,
+    Show,
 }
 
 impl Mood {
@@ -299,6 +302,7 @@ impl Mood {
             "calm" | "peaceful" | "serene" => Some(Mood::Calm),
             "ambient" | "atmospheric" | "drone" => Some(Mood::Ambient),
             "jazz" | "jazzy" | "swing" => Some(Mood::Jazz),
+            "show" | "broadway" | "musical" | "theater" | "theatrical" => Some(Mood::Show),
             _ => None,
         }
     }
@@ -311,7 +315,8 @@ impl Mood {
             Mood::Upbeat => Key::C,
             Mood::Calm => Key::G,
             Mood::Ambient => Key::Em,
-            Mood::Jazz => Key::F, // Common jazz key
+            Mood::Jazz => Key::F,    // Common jazz key
+            Mood::Show => Key::Bb,   // Broadway standard key
         }
     }
 }
@@ -364,6 +369,7 @@ pub fn generate_mood(mood: Mood, config: &PresetConfig) -> Vec<NoteSequence> {
         Mood::Calm => CalmPreset.generate(config),
         Mood::Ambient => AmbientPreset.generate(config),
         Mood::Jazz => JazzPreset.generate(config),
+        Mood::Show => ShowPreset.generate(config),
     }
 }
 
@@ -423,6 +429,7 @@ mod tests {
             Mood::Calm,
             Mood::Ambient,
             Mood::Jazz,
+            Mood::Show,
         ] {
             let sequences = generate_mood(mood, &config);
             assert!(

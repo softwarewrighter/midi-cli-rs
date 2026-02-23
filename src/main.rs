@@ -496,6 +496,10 @@ fn run(command: Commands) -> Result<(), Box<dyn std::error::Error>> {
                 "{:<12} {:<8} Nightclub trio with walking bass and piano comping",
                 "jazz", "F"
             );
+            println!(
+                "{:<12} {:<8} Broadway/Hollywood musical theater orchestration",
+                "show", "Bb"
+            );
             println!("\nUsage: midi-cli-rs preset --mood suspense --duration 5 -o out.wav");
             println!("       midi-cli-rs preset -m jazz -d 10 --key Bb --seed 42 -o nightclub.wav");
             Ok(())
