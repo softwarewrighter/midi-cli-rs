@@ -262,187 +262,674 @@
 
 ---
 
-## Phase 6: Future Mood Enhancements
+## Phase 6: Mood Plugin Architecture
 
-**Goal**: Extensible mood system with user-defined presets and plugin architecture
+**Goal**: Extensible mood system where each mood is a distinct, selectable preset. Seeds provide variation *within* a mood, not selection between moods.
 
-### Planned Moods
+### Design Principles
 
-#### Show/Musical (Broadway/Hollywood Style)
-- **Character**: Dramatic, theatrical, emotionally expressive
-- **Layers**:
-  - Orchestra strings (lush, sweeping)
-  - Brass fanfares and accents
-  - Piano accompaniment (arpeggiated, rhythmic)
-  - Vocal-range melody line (for singability)
-- **Patterns**: Big crescendos, dramatic pauses, key changes
-- **Keys**: Bb, Eb, F (common Broadway keys)
+1. **Each mood is distinct**: `orchestral-dark` and `orchestral-relaxing` are separate moods, not seed variations
+2. **Seeds vary within a mood**: Same mood + different seed = different instruments, rhythms, velocities
+3. **Mood packs bundle related moods**: A pack like "orchestral" contains multiple distinct moods
+4. **Inheritance reduces duplication**: Moods can extend base definitions
 
-#### Orchestral Family
-Sub-moods sharing orchestral instrumentation with different characters:
+---
 
-| Sub-mood | Character | Tempo | Key | Emphasis |
-|----------|-----------|-------|-----|----------|
-| orchestral-relaxing | Peaceful, flowing | 60-80 | G, D | Strings, woodwinds, harp |
-| orchestral-dark | Ominous, dramatic | 50-70 | Dm, Am | Low brass, timpani, cello |
-| orchestral-energetic | Exciting, driving | 120-140 | C, A | Full orchestra, percussion |
-| orchestral-baroque | Period-authentic | 80-100 | D, G | Harpsichord, strings, counterpoint |
+### 6.1 Mood Hierarchy
 
-#### Additional Future Moods
-- **cinematic**: Film score style with dynamic arcs
-- **electronic**: Synth-based with arpeggios and pads
-- **world**: Ethnic scales and instruments (pentatonic, modes)
-- **lo-fi**: Jazzy chords with tape-style warmth
-- **chiptune**: 8-bit style with square/triangle waves
+```
+MoodPack (file: orchestral.toml)
+├── [base]                    # Shared settings for all moods in pack
+│   ├── instrument_pools
+│   ├── scales
+│   └── common layers
+│
+├── orchestral-relaxing       # Distinct mood
+├── orchestral-dark           # Distinct mood
+├── orchestral-energetic      # Distinct mood
+└── orchestral-baroque        # Distinct mood
+```
 
-### 6.1 Mood Pack Architecture
+**CLI Usage**:
+```bash
+# Each mood is directly selectable
+midi-cli-rs preset -m orchestral-dark -d 10 -o dark.wav
+midi-cli-rs preset -m orchestral-relaxing -d 10 -o relax.wav
 
-**Goal**: Allow mood presets to be defined as data files rather than compiled code
+# Seeds vary WITHIN that mood
+midi-cli-rs preset -m orchestral-dark --seed 1 -o dark1.wav
+midi-cli-rs preset -m orchestral-dark --seed 2 -o dark2.wav  # Different variation, same dark character
 
-#### MoodPack Format (TOML/JSON)
+# List all moods including sub-moods
+midi-cli-rs moods
+# Output:
+#   orchestral-relaxing  G    Peaceful flowing strings and woodwinds
+#   orchestral-dark      Dm   Ominous brass and timpani
+#   orchestral-energetic C    Driving full orchestra
+#   orchestral-baroque   D    Period harpsichord and counterpoint
+```
+
+---
+
+### 6.2 MoodPack File Format (TOML)
 
 ```toml
-# ~/.midi-cli-rs/moods/cinematic.toml
-[mood]
-name = "cinematic"
-description = "Epic film score style with dynamic builds"
-aliases = ["film", "movie", "epic"]
+# ~/.midi-cli-rs/moods/orchestral.toml
+
+[pack]
+name = "orchestral"
+version = "1.0"
+author = "midi-cli-rs"
+description = "Classical orchestral mood family"
+
+# ============================================================
+# BASE DEFINITIONS (inherited by all moods in this pack)
+# ============================================================
+
+[base]
+# Shared instrument pools that moods can reference by name
+[base.instruments]
+strings_ensemble = ["strings", "tremolo_strings", "string_ensemble_1", "string_ensemble_2"]
+woodwinds = ["flute", "oboe", "clarinet", "bassoon"]
+brass = ["french_horn", "trumpet", "trombone", "tuba"]
+percussion = ["timpani", "orchestral_hit", "tubular_bells"]
+keyboards = ["harpsichord", "celesta", "piano"]
+
+# Shared scale definitions
+[base.scales]
+major = [0, 2, 4, 5, 7, 9, 11]
+natural_minor = [0, 2, 3, 5, 7, 8, 10]
+harmonic_minor = [0, 2, 3, 5, 7, 8, 11]
+dorian = [0, 2, 3, 5, 7, 9, 10]
+
+# Shared rhythm patterns (in beats)
+[base.rhythms]
+sustained = [0.0]
+quarter_notes = [0.0, 1.0, 2.0, 3.0]
+half_notes = [0.0, 2.0]
+waltz = [0.0, 1.0, 2.0]
+fanfare = [0.0, 0.5, 1.5, 3.0]
+
+# ============================================================
+# MOOD: orchestral-relaxing
+# ============================================================
+
+[[moods]]
+name = "orchestral-relaxing"
+aliases = ["orch-relax", "peaceful-orchestra"]
+description = "Peaceful flowing strings and woodwinds"
+default_key = "G"
+default_tempo = 70
+tempo_range = [60, 80]
+
+[moods.dynamics]
+velocity_base = 60
+velocity_range = 20
+build_curve = "wave"      # gentle swells
+
+[moods.harmony]
+scale = "major"
+mode = "ionian"
+chord_style = "open"      # wide voicings
+progression = ["I", "vi", "IV", "V"]
+
+[[moods.layers]]
+name = "strings_foundation"
+instruments = "@strings_ensemble"   # Reference base pool
+role = "foundation"
+register = { base = "C3", range = 24 }
+pattern = "sustained"
+probability = 1.0
+velocity_offset = 0
+
+[[moods.layers]]
+name = "woodwind_melody"
+instruments = "@woodwinds"
+role = "melody"
+register = { base = "C4", range = 12 }
+pattern = { type = "melodic", contour = "arch", phrase_length = [4, 8] }
+probability = 0.8
+velocity_offset = 10
+
+[[moods.layers]]
+name = "harp_arpeggios"
+instruments = ["harp"]
+role = "texture"
+register = { base = "C4", range = 24 }
+pattern = { type = "arpeggiated", intervals = [0, 4, 7, 12], rhythm = "@quarter_notes" }
+probability = 0.6
+velocity_offset = -10
+
+# ============================================================
+# MOOD: orchestral-dark
+# ============================================================
+
+[[moods]]
+name = "orchestral-dark"
+aliases = ["orch-dark", "ominous", "dramatic"]
+description = "Ominous dramatic brass and timpani"
 default_key = "Dm"
-default_tempo = 90
+default_tempo = 60
+tempo_range = [50, 70]
 
-[[layers]]
-name = "strings_pad"
-instrument_pool = ["strings", "tremolo_strings", "string_ensemble_1"]
-register = "mid"        # low, mid, high
-role = "foundation"     # foundation, melody, accent, texture
-probability = 1.0       # always include
-pattern = "sustained"   # sustained, arpeggiated, rhythmic, sparse
+[moods.dynamics]
+velocity_base = 50
+velocity_range = 40        # Wide dynamic range for drama
+build_curve = "crescendo"
 
-[[layers]]
-name = "brass_hits"
-instrument_pool = ["french_horn", "trombone", "trumpet"]
-register = "mid"
+[moods.harmony]
+scale = "harmonic_minor"
+mode = "aeolian"
+chord_style = "close"      # dense voicings
+progression = ["i", "iv", "V", "i"]
+tension_intervals = [1, 6]  # minor 2nd, tritone
+
+[[moods.layers]]
+name = "low_strings_drone"
+instruments = ["cello", "contrabass"]
+role = "foundation"
+register = { base = "C2", range = 12 }
+pattern = "sustained"
+probability = 1.0
+velocity_offset = 0
+
+[[moods.layers]]
+name = "brass_swells"
+instruments = "@brass"
 role = "accent"
+register = { base = "C3", range = 18 }
+pattern = { type = "sparse", density = 0.3, trigger = "downbeat" }
+probability = 0.8
+velocity_offset = 20
+
+[[moods.layers]]
+name = "timpani_hits"
+instruments = ["timpani"]
+role = "accent"
+register = { base = "C2", range = 12 }
+pattern = { type = "rhythmic", rhythm = "@fanfare" }
 probability = 0.7
-pattern = "sparse"
-trigger = "downbeat"    # downbeat, upbeat, random
+velocity_offset = 30
 
-[[layers]]
-name = "timpani"
-instrument_pool = ["timpani", "orchestral_hit"]
-register = "low"
-role = "accent"
+[[moods.layers]]
+name = "tremolo_tension"
+instruments = ["tremolo_strings"]
+role = "texture"
+register = { base = "C4", range = 12 }
+pattern = { type = "tremolo", speed = "fast" }
 probability = 0.5
-pattern = "rhythmic"
+velocity_offset = -5
 
-[dynamics]
-build_curve = "crescendo"  # crescendo, decrescendo, wave, flat
-intensity_map = { low = 0.3, mid = 0.6, high = 1.0 }
+# ============================================================
+# MOOD: orchestral-energetic
+# ============================================================
 
-[harmony]
-scale = "natural_minor"
-chord_progression = ["i", "VI", "III", "VII"]  # Roman numeral
-tension_intervals = [6, 11]  # tritone, major 7th
+[[moods]]
+name = "orchestral-energetic"
+aliases = ["orch-energy", "driving", "action"]
+description = "Driving full orchestra with percussion"
+default_key = "C"
+default_tempo = 130
+tempo_range = [120, 145]
+
+[moods.dynamics]
+velocity_base = 80
+velocity_range = 30
+build_curve = "flat"       # Consistently high energy
+
+[moods.harmony]
+scale = "major"
+mode = "mixolydian"        # Slightly edgy major
+chord_style = "power"
+progression = ["I", "IV", "V", "I"]
+
+[[moods.layers]]
+name = "full_strings"
+instruments = "@strings_ensemble"
+role = "foundation"
+register = { base = "C3", range = 24 }
+pattern = { type = "rhythmic", rhythm = "@quarter_notes" }
+probability = 1.0
+velocity_offset = 0
+
+[[moods.layers]]
+name = "brass_fanfare"
+instruments = "@brass"
+role = "melody"
+register = { base = "C4", range = 12 }
+pattern = { type = "melodic", contour = "ascending", phrase_length = [2, 4] }
+probability = 0.9
+velocity_offset = 15
+
+[[moods.layers]]
+name = "percussion_drive"
+instruments = "@percussion"
+role = "rhythm"
+register = { base = "C3", range = 12 }
+pattern = { type = "rhythmic", rhythm = "@quarter_notes" }
+probability = 1.0
+velocity_offset = 10
+
+[[moods.layers]]
+name = "woodwind_flourish"
+instruments = "@woodwinds"
+role = "accent"
+register = { base = "C5", range = 12 }
+pattern = { type = "sparse", density = 0.4, trigger = "phrase_end" }
+probability = 0.6
+velocity_offset = 5
+
+# ============================================================
+# MOOD: orchestral-baroque
+# ============================================================
+
+[[moods]]
+name = "orchestral-baroque"
+aliases = ["baroque", "classical", "period"]
+description = "Period-authentic harpsichord and counterpoint"
+default_key = "D"
+default_tempo = 90
+tempo_range = [80, 100]
+
+[moods.dynamics]
+velocity_base = 70
+velocity_range = 15        # Baroque had limited dynamics
+build_curve = "terraced"   # Sudden dynamic shifts
+
+[moods.harmony]
+scale = "major"
+mode = "ionian"
+chord_style = "baroque"    # Figured bass style
+progression = ["I", "V", "vi", "IV", "I", "V", "I"]
+
+[[moods.layers]]
+name = "harpsichord_continuo"
+instruments = ["harpsichord"]
+role = "foundation"
+register = { base = "C3", range = 24 }
+pattern = { type = "arpeggiated", intervals = [0, 4, 7, 4], rhythm = [0.0, 0.5, 1.0, 1.5] }
+probability = 1.0
+velocity_offset = 0
+
+[[moods.layers]]
+name = "violin_melody"
+instruments = ["violin"]
+role = "melody"
+register = { base = "G4", range = 12 }
+pattern = { type = "melodic", contour = "baroque_sequence", phrase_length = [4, 8] }
+probability = 1.0
+velocity_offset = 10
+
+[[moods.layers]]
+name = "cello_bass"
+instruments = ["cello"]
+role = "bass"
+register = { base = "C2", range = 12 }
+pattern = { type = "walking", style = "baroque_bass" }
+probability = 1.0
+velocity_offset = -5
+
+[[moods.layers]]
+name = "flute_counterpoint"
+instruments = ["flute", "oboe"]
+role = "counter_melody"
+register = { base = "C5", range = 12 }
+pattern = { type = "melodic", contour = "contrary", phrase_length = [4, 8] }
+probability = 0.7
+velocity_offset = 5
 ```
 
-#### Rust Struct Serialization
+---
+
+### 6.3 Rust Data Structures
 
 ```rust
-#[derive(Serialize, Deserialize, Clone)]
+/// A mood pack containing multiple related moods with shared base definitions.
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct MoodPack {
-    pub mood: MoodMeta,
-    pub layers: Vec<LayerDef>,
+    pub pack: PackMeta,
+    #[serde(default)]
+    pub base: BaseDefs,
+    pub moods: Vec<MoodDef>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct PackMeta {
+    pub name: String,
+    pub version: String,
+    #[serde(default)]
+    pub author: Option<String>,
+    #[serde(default)]
+    pub description: Option<String>,
+}
+
+/// Shared definitions inherited by all moods in the pack.
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct BaseDefs {
+    #[serde(default)]
+    pub instruments: HashMap<String, Vec<String>>,
+    #[serde(default)]
+    pub scales: HashMap<String, Vec<i8>>,
+    #[serde(default)]
+    pub rhythms: HashMap<String, Vec<f64>>,
+}
+
+/// A single mood definition.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct MoodDef {
+    pub name: String,
+    #[serde(default)]
+    pub aliases: Vec<String>,
+    pub description: String,
+    pub default_key: String,
+    pub default_tempo: u16,
+    #[serde(default)]
+    pub tempo_range: Option<(u16, u16)>,
     pub dynamics: DynamicsDef,
     pub harmony: HarmonyDef,
+    pub layers: Vec<LayerDef>,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct DynamicsDef {
+    pub velocity_base: u8,
+    pub velocity_range: u8,
+    #[serde(default = "default_build_curve")]
+    pub build_curve: BuildCurve,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "snake_case")]
+pub enum BuildCurve {
+    Flat,
+    Crescendo,
+    Decrescendo,
+    Wave,
+    Terraced,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct HarmonyDef {
+    pub scale: String,              // Reference to base.scales or literal
+    #[serde(default)]
+    pub mode: Option<String>,
+    #[serde(default)]
+    pub chord_style: Option<String>,
+    #[serde(default)]
+    pub progression: Vec<String>,   // Roman numerals
+    #[serde(default)]
+    pub tension_intervals: Vec<i8>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct LayerDef {
     pub name: String,
-    pub instrument_pool: Vec<String>,
-    pub register: Register,
+    pub instruments: InstrumentRef,  // "@pool_name" or ["inst1", "inst2"]
     pub role: LayerRole,
+    pub register: RegisterDef,
+    pub pattern: PatternDef,
+    #[serde(default = "default_probability")]
     pub probability: f64,
-    pub pattern: PatternType,
     #[serde(default)]
-    pub trigger: Option<TriggerType>,
+    pub velocity_offset: i8,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(untagged)]
+pub enum InstrumentRef {
+    PoolRef(String),           // "@strings_ensemble"
+    Literal(Vec<String>),      // ["violin", "viola"]
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "snake_case")]
+pub enum LayerRole {
+    Foundation,
+    Melody,
+    CounterMelody,
+    Bass,
+    Rhythm,
+    Accent,
+    Texture,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct RegisterDef {
+    pub base: String,    // "C3"
+    pub range: u8,       // Semitones
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(untagged)]
+pub enum PatternDef {
+    Simple(String),      // "sustained"
+    Complex {
+        #[serde(rename = "type")]
+        pattern_type: PatternType,
+        #[serde(flatten)]
+        params: PatternParams,
+    },
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "snake_case")]
 pub enum PatternType {
     Sustained,
-    Arpeggiated { intervals: Vec<i8>, rhythm: Vec<f64> },
-    Rhythmic { pattern: Vec<f64> },
-    Sparse { density: f64 },
-    Walking { style: WalkingStyle },
-    Melodic { contour: Vec<i8> },
+    Arpeggiated,
+    Rhythmic,
+    Melodic,
+    Sparse,
+    Walking,
+    Tremolo,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct PatternParams {
+    #[serde(default)]
+    pub intervals: Option<Vec<i8>>,
+    #[serde(default)]
+    pub rhythm: Option<RhythmRef>,
+    #[serde(default)]
+    pub contour: Option<String>,
+    #[serde(default)]
+    pub phrase_length: Option<Vec<u8>>,
+    #[serde(default)]
+    pub density: Option<f64>,
+    #[serde(default)]
+    pub trigger: Option<String>,
+    #[serde(default)]
+    pub style: Option<String>,
+    #[serde(default)]
+    pub speed: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(untagged)]
+pub enum RhythmRef {
+    PoolRef(String),       // "@quarter_notes"
+    Literal(Vec<f64>),     // [0.0, 0.5, 1.0]
 }
 ```
 
-### 6.2 MoodPack Loading
+---
+
+### 6.4 Seed Variation System
+
+Seeds control variation **within** a mood, not between moods:
 
 ```rust
-// Load built-in moods
-let builtin = MoodRegistry::load_builtin();
+impl MoodDef {
+    /// Generate note sequences using seed for variation.
+    pub fn generate(&self, config: &PresetConfig, base: &BaseDefs) -> Vec<NoteSequence> {
+        let variation = PresetVariation::from_seed(config.seed);
+        let mut sequences = Vec::new();
 
-// Load user mood packs from ~/.midi-cli-rs/moods/
-let user_packs = MoodRegistry::load_from_dir("~/.midi-cli-rs/moods/")?;
+        for (i, layer) in self.layers.iter().enumerate() {
+            // Seed determines: which instrument from pool, layer inclusion, velocities
+            if variation.layer_probs[i] < layer.probability {
+                let instrument = self.pick_instrument(layer, &variation, i, base);
+                let notes = self.generate_layer(layer, &variation, config, base);
+                sequences.push(NoteSequence { instrument, notes, .. });
+            }
+        }
 
-// CLI: list all available moods
-midi-cli-rs moods --all
+        sequences
+    }
 
-// CLI: use a mood pack
-midi-cli-rs preset --mood cinematic -d 10 -o epic.wav
-
-// CLI: export built-in mood as editable pack
-midi-cli-rs mood-export jazz --output ~/.midi-cli-rs/moods/my-jazz.toml
-
-// CLI: validate a mood pack
-midi-cli-rs mood-validate ~/.midi-cli-rs/moods/custom.toml
+    fn pick_instrument(&self, layer: &LayerDef, var: &PresetVariation, idx: usize, base: &BaseDefs) -> String {
+        let pool = layer.resolve_instruments(base);
+        let index = var.instrument_indices[idx] as usize % pool.len();
+        pool[index].clone()
+    }
+}
 ```
 
-### 6.3 Interactive Mood Editor (Web UI)
+**What seeds vary**:
+- Which instrument is picked from a layer's pool
+- Whether optional layers are included (probability threshold)
+- Velocity variations within the allowed range
+- Melodic contour selection (from 16 patterns)
+- Phrase lengths within allowed range
+- Rest placement
+- Tempo micro-variations (±15%)
 
-Extend the web UI to support mood pack editing:
+**What seeds do NOT vary**:
+- The mood's character (dark stays dark)
+- Layer roles and structure
+- Harmonic language (scale, progression)
+- Register ranges
+- Instrument pools available
 
-- Visual layer editor with drag-and-drop
-- Instrument pool selector with audio preview
-- Pattern designer with piano roll visualization
-- Real-time preview while editing
-- Export to TOML/JSON for sharing
+---
 
-### 6.4 Mood Pack Repository
+### 6.5 MoodRegistry
 
-Future: Community mood pack sharing
+```rust
+pub struct MoodRegistry {
+    /// Built-in moods (compiled Rust)
+    builtin: HashMap<String, Box<dyn MoodGenerator>>,
+    /// User moods from TOML packs
+    packs: HashMap<String, MoodPack>,
+    /// Flattened mood lookup (name -> pack + mood index)
+    mood_index: HashMap<String, (String, usize)>,
+}
+
+impl MoodRegistry {
+    pub fn load() -> Result<Self, Error> {
+        let mut registry = Self::load_builtin();
+
+        // Load user packs from ~/.midi-cli-rs/moods/*.toml
+        let mood_dir = dirs::config_dir()
+            .unwrap_or_default()
+            .join("midi-cli-rs")
+            .join("moods");
+
+        if mood_dir.exists() {
+            for entry in fs::read_dir(&mood_dir)? {
+                let path = entry?.path();
+                if path.extension() == Some("toml".as_ref()) {
+                    let pack: MoodPack = toml::from_str(&fs::read_to_string(&path)?)?;
+                    registry.register_pack(pack)?;
+                }
+            }
+        }
+
+        Ok(registry)
+    }
+
+    pub fn list_moods(&self) -> Vec<MoodInfo> {
+        // Returns all moods: builtin + user-defined
+    }
+
+    pub fn get_mood(&self, name: &str) -> Option<&dyn MoodGenerator> {
+        // Lookup by name or alias
+    }
+}
+```
+
+---
+
+### 6.6 CLI Commands
 
 ```bash
-# Install mood pack from repository
-midi-cli-rs mood-install epic-orchestral
+# List all moods (builtin + user packs)
+midi-cli-rs moods
+# Output:
+#   BUILTIN MOODS:
+#   suspense        Am   Tense low drone with tremolo
+#   eerie           Dm   Sparse unsettling atmosphere
+#   upbeat          C    Energetic rhythmic feel
+#   calm            G    Peaceful sustained pads
+#   ambient         Em   Evolving drone textures
+#   jazz            F    Nightclub trio style
+#
+#   USER MOODS (from ~/.midi-cli-rs/moods/):
+#   orchestral-relaxing   G    Peaceful flowing strings and woodwinds
+#   orchestral-dark       Dm   Ominous dramatic brass and timpani
+#   orchestral-energetic  C    Driving full orchestra
+#   orchestral-baroque    D    Period-authentic counterpoint
 
-# List available mood packs
-midi-cli-rs mood-search "orchestral"
+# Generate with user mood
+midi-cli-rs preset -m orchestral-dark -d 10 --seed 42 -o dark.wav
 
-# Share your mood pack
-midi-cli-rs mood-publish ~/.midi-cli-rs/moods/my-mood.toml
+# Export builtin mood as editable TOML
+midi-cli-rs mood export jazz -o ~/.midi-cli-rs/moods/my-jazz.toml
+
+# Validate a mood pack
+midi-cli-rs mood validate ~/.midi-cli-rs/moods/custom.toml
+
+# Show mood details
+midi-cli-rs mood info orchestral-dark
+# Output:
+#   Name: orchestral-dark
+#   Pack: orchestral
+#   Key: Dm  Tempo: 60 (50-70)
+#   Description: Ominous dramatic brass and timpani
+#   Layers:
+#     1. low_strings_drone (foundation) - cello, contrabass
+#     2. brass_swells (accent) - french_horn, trumpet, trombone, tuba
+#     3. timpani_hits (accent) - timpani
+#     4. tremolo_tension (texture) - tremolo_strings
+
+# Create new mood pack interactively (future)
+midi-cli-rs mood new my-pack
 ```
+
+---
+
+### 6.7 Planned Mood Packs
+
+| Pack | Moods | Character |
+|------|-------|-----------|
+| **orchestral** | relaxing, dark, energetic, baroque | Classical orchestra variations |
+| **show** | ballad, uptempo, dramatic, comedic | Broadway/musical theater |
+| **electronic** | ambient, driving, glitch, chillwave | Synth-based styles |
+| **world** | asian, celtic, middle-eastern, latin | Ethnic scales and instruments |
+| **cinematic** | tension, action, romance, wonder | Film score emotions |
+| **retro** | lo-fi, synthwave, chiptune, disco | Period electronic styles |
+
+---
 
 ### Tasks
 
-- [ ] **6.1** Define MoodPack serialization format (TOML)
-- [ ] **6.2** Implement MoodPack struct with serde
-- [ ] **6.3** Create MoodRegistry for loading packs from disk
-- [ ] **6.4** Implement `mood-export` CLI command
-- [ ] **6.5** Implement `mood-validate` CLI command
-- [ ] **6.6** Add user mood directory scanning
-- [ ] **6.7** Implement Show/Musical preset (compiled)
-- [ ] **6.8** Implement Orchestral family presets (compiled)
-- [ ] **6.9** Web UI mood editor component
-- [ ] **6.10** Mood pack repository integration
+- [ ] **6.1** Define MoodPack TOML schema (this document)
+- [ ] **6.2** Implement MoodPack/MoodDef structs with serde
+- [ ] **6.3** Implement reference resolution (@pool_name)
+- [ ] **6.4** Create MoodRegistry with builtin + user loading
+- [ ] **6.5** Implement MoodDef::generate() from TOML definition
+- [ ] **6.6** Add `mood export` CLI command
+- [ ] **6.7** Add `mood validate` CLI command
+- [ ] **6.8** Add `mood info` CLI command
+- [ ] **6.9** Create orchestral.toml example pack
+- [ ] **6.10** Create show.toml example pack
+- [ ] **6.11** Web UI mood pack browser
+- [ ] **6.12** Web UI mood pack editor
 
 ### Acceptance Criteria
 
-- [ ] User can create custom moods via TOML files
-- [ ] Built-in moods can be exported and modified
-- [ ] Custom moods produce valid, musical output
-- [ ] Web UI allows visual mood editing
-- [ ] 10+ moods available (built-in + examples)
+- [ ] User moods from TOML work identically to builtin moods
+- [ ] `midi-cli-rs moods` lists all available moods
+- [ ] Seeds vary output within a mood, not the mood character
+- [ ] Builtin moods can be exported and modified
+- [ ] Invalid TOML packs produce clear error messages
+- [ ] 15+ moods available (6 builtin + orchestral pack + show pack)
