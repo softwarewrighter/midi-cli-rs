@@ -1,7 +1,7 @@
 # Electronic Mood Pack
 # Synth-based electronic music styles
 
-[meta]
+[pack]
 name = "electronic"
 version = "1.0.0"
 author = "midi-cli-rs"

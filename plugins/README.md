@@ -23,7 +23,7 @@ The current plugin system uses TOML configuration that maps to built-in trait im
 ### Structure
 
 ```toml
-[meta]
+[pack]
 name = "my-pack"
 version = "1.0.0"
 

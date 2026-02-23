@@ -2,7 +2,7 @@
 # Copy this file and customize to create your own mood pack.
 # Install by copying to ~/.midi-cli-rs/moods/
 
-[meta]
+[pack]
 name = "my-mood-pack"        # Unique identifier (no spaces)
 version = "1.0.0"            # Semantic version
 author = "Your Name"         # Optional

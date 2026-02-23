@@ -1,7 +1,7 @@
 # Cinematic Mood Pack
 # Epic film score style compositions
 
-[meta]
+[pack]
 name = "cinematic"
 version = "1.0.0"
 author = "midi-cli-rs"
