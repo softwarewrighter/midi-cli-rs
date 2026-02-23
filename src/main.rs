@@ -472,6 +472,9 @@ fn run(command: Commands) -> Result<(), Box<dyn std::error::Error>> {
             println!("Available mood presets:\n");
             println!("{:<12} {:<8} DESCRIPTION", "MOOD", "KEY");
             println!("{:-<60}", "");
+
+            // Built-in moods
+            println!("\n[Built-in]");
             println!(
                 "{:<12} {:<8} Tense mood with low drones and tremolo strings",
                 "suspense", "Am"
@@ -504,6 +507,59 @@ fn run(command: Commands) -> Result<(), Box<dyn std::error::Error>> {
                 "{:<12} {:<8} Full symphonic orchestra with all sections",
                 "orchestral", "C"
             );
+
+            // Plugin moods
+            let moods_dir = std::env::var("HOME")
+                .map(|h| std::path::PathBuf::from(h).join(".midi-cli-rs/moods"))
+                .unwrap_or_default();
+
+            if moods_dir.exists() {
+                if let Ok(entries) = std::fs::read_dir(&moods_dir) {
+                    let mut plugin_moods: Vec<(String, String, String, String)> = Vec::new();
+
+                    for entry in entries.flatten() {
+                        let path = entry.path();
+                        if path.extension().map(|e| e == "toml").unwrap_or(false) {
+                            if let Ok(content) = std::fs::read_to_string(&path) {
+                                if let Ok(pack) = content.parse::<toml::Table>() {
+                                    let pack_name = pack.get("pack")
+                                        .and_then(|p| p.get("name"))
+                                        .and_then(|n| n.as_str())
+                                        .unwrap_or("unknown");
+
+                                    if let Some(moods) = pack.get("moods").and_then(|m| m.as_array()) {
+                                        for mood in moods {
+                                            let name = mood.get("name").and_then(|n| n.as_str()).unwrap_or("");
+                                            let key = mood.get("default_key").and_then(|k| k.as_str()).unwrap_or("C");
+                                            let desc = mood.get("description").and_then(|d| d.as_str()).unwrap_or("");
+                                            if !name.is_empty() {
+                                                plugin_moods.push((
+                                                    pack_name.to_string(),
+                                                    name.to_string(),
+                                                    key.to_string(),
+                                                    desc.to_string(),
+                                                ));
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if !plugin_moods.is_empty() {
+                        let mut current_pack = String::new();
+                        for (pack, name, key, desc) in plugin_moods {
+                            if pack != current_pack {
+                                println!("\n[Plugin: {}]", pack);
+                                current_pack = pack;
+                            }
+                            println!("{:<12} {:<8} {}", name, key, desc);
+                        }
+                    }
+                }
+            }
+
             println!("\nUsage: midi-cli-rs preset --mood suspense --duration 5 -o out.wav");
             println!("       midi-cli-rs preset -m jazz -d 10 --key Bb --seed 42 -o nightclub.wav");
             Ok(())

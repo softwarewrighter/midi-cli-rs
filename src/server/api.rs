@@ -32,7 +32,7 @@ pub async fn create_preset(
         return Err((
             StatusCode::BAD_REQUEST,
             Json(ErrorResponse {
-                error: format!("Invalid mood: {}. Valid moods: suspense, eerie, upbeat, calm, ambient, jazz", req.mood),
+                error: format!("Invalid mood: {}. Use /api/moods to see available moods.", req.mood),
             }),
         ));
     }
@@ -82,7 +82,7 @@ pub async fn update_preset(
         return Err((
             StatusCode::BAD_REQUEST,
             Json(ErrorResponse {
-                error: format!("Invalid mood: {}. Valid moods: suspense, eerie, upbeat, calm, ambient, jazz", req.mood),
+                error: format!("Invalid mood: {}. Use /api/moods to see available moods.", req.mood),
             }),
         ));
     }
@@ -233,31 +233,114 @@ pub async fn generate_audio(
     }))
 }
 
-/// GET /api/moods - List available moods.
+/// GET /api/moods - List available moods (built-in + plugins).
 pub async fn list_moods() -> impl IntoResponse {
-    Json(vec![
-        MoodInfo { name: "suspense", key: "Am", description: "Tense mood with low drones and tremolo strings" },
-        MoodInfo { name: "eerie", key: "Dm", description: "Creepy mood with sparse tones and diminished harmony" },
-        MoodInfo { name: "upbeat", key: "C", description: "Energetic mood with rhythmic patterns" },
-        MoodInfo { name: "calm", key: "G", description: "Peaceful mood with sustained pads and arpeggios" },
-        MoodInfo { name: "ambient", key: "Em", description: "Atmospheric mood with drones and pentatonic tones" },
-        MoodInfo { name: "jazz", key: "F", description: "Nightclub trio with walking bass and piano comping" },
-    ])
+    let mut moods = vec![
+        MoodInfo { name: "suspense".to_string(), key: "Am".to_string(), description: "Tense mood with low drones and tremolo strings".to_string(), source: "builtin".to_string() },
+        MoodInfo { name: "eerie".to_string(), key: "Dm".to_string(), description: "Creepy mood with sparse tones and diminished harmony".to_string(), source: "builtin".to_string() },
+        MoodInfo { name: "upbeat".to_string(), key: "C".to_string(), description: "Energetic mood with rhythmic patterns".to_string(), source: "builtin".to_string() },
+        MoodInfo { name: "calm".to_string(), key: "G".to_string(), description: "Peaceful mood with sustained pads and arpeggios".to_string(), source: "builtin".to_string() },
+        MoodInfo { name: "ambient".to_string(), key: "Em".to_string(), description: "Atmospheric mood with drones and pentatonic tones".to_string(), source: "builtin".to_string() },
+        MoodInfo { name: "jazz".to_string(), key: "F".to_string(), description: "Nightclub trio with walking bass and piano comping".to_string(), source: "builtin".to_string() },
+        MoodInfo { name: "show".to_string(), key: "Bb".to_string(), description: "Broadway/Hollywood musical theater orchestration".to_string(), source: "builtin".to_string() },
+        MoodInfo { name: "orchestral".to_string(), key: "C".to_string(), description: "Full symphonic orchestra with all sections".to_string(), source: "builtin".to_string() },
+    ];
+
+    // Add moods from installed plugins
+    let moods_dir = get_moods_dir();
+    if moods_dir.exists() {
+        if let Ok(entries) = std::fs::read_dir(&moods_dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.extension().map(|e| e == "toml").unwrap_or(false) {
+                    if let Ok(content) = std::fs::read_to_string(&path) {
+                        if let Ok(pack) = content.parse::<toml::Table>() {
+                            let pack_name = pack.get("pack")
+                                .and_then(|p| p.get("name"))
+                                .and_then(|n| n.as_str())
+                                .unwrap_or("unknown");
+
+                            if let Some(pack_moods) = pack.get("moods").and_then(|m| m.as_array()) {
+                                for mood in pack_moods {
+                                    let name = mood.get("name").and_then(|n| n.as_str()).unwrap_or("").to_string();
+                                    let key = mood.get("default_key").and_then(|k| k.as_str()).unwrap_or("C").to_string();
+                                    let desc = mood.get("description").and_then(|d| d.as_str()).unwrap_or("").to_string();
+                                    if !name.is_empty() {
+                                        moods.push(MoodInfo {
+                                            name,
+                                            key,
+                                            description: desc,
+                                            source: format!("plugin:{}", pack_name),
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Json(moods)
 }
 
 #[derive(serde::Serialize)]
 struct MoodInfo {
-    name: &'static str,
-    key: &'static str,
-    description: &'static str,
+    name: String,
+    key: String,
+    description: String,
+    source: String,
 }
 
 /// Check if a mood name is valid.
+/// Built-in moods
+const BUILTIN_MOODS: &[&str] = &[
+    "suspense", "eerie", "upbeat", "calm", "ambient", "jazz", "show", "orchestral",
+];
+
 fn is_valid_mood(mood: &str) -> bool {
-    matches!(
-        mood.to_lowercase().as_str(),
-        "suspense" | "eerie" | "upbeat" | "calm" | "ambient" | "jazz"
-    )
+    let mood_lower = mood.to_lowercase();
+    // Check built-in moods
+    if BUILTIN_MOODS.contains(&mood_lower.as_str()) {
+        return true;
+    }
+    // Check plugin moods
+    if let Some(plugin_moods) = get_plugin_moods() {
+        if plugin_moods.contains(&mood_lower) {
+            return true;
+        }
+    }
+    false
+}
+
+/// Get all mood names from installed plugins
+fn get_plugin_moods() -> Option<Vec<String>> {
+    let moods_dir = get_moods_dir();
+    if !moods_dir.exists() {
+        return None;
+    }
+
+    let mut moods = Vec::new();
+    if let Ok(entries) = std::fs::read_dir(&moods_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.extension().map(|e| e == "toml").unwrap_or(false) {
+                if let Ok(content) = std::fs::read_to_string(&path) {
+                    if let Ok(pack) = content.parse::<toml::Table>() {
+                        if let Some(pack_moods) = pack.get("moods").and_then(|m| m.as_array()) {
+                            for mood in pack_moods {
+                                if let Some(name) = mood.get("name").and_then(|n| n.as_str()) {
+                                    moods.push(name.to_lowercase());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if moods.is_empty() { None } else { Some(moods) }
 }
 
 // ============================================================================

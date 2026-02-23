@@ -125,6 +125,14 @@ pub struct InstrumentInfo {
     pub program: u8,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct MoodInfo {
+    pub name: String,
+    pub key: String,
+    pub description: String,
+    pub source: String,
+}
+
 #[derive(Deserialize)]
 struct ErrorResponse {
     error: String,
@@ -327,6 +335,19 @@ impl ApiClient {
             response.json().await.map_err(|e| e.to_string())
         } else {
             Err(format!("Failed to fetch instruments: {}", response.status()))
+        }
+    }
+
+    pub async fn list_moods() -> Result<Vec<MoodInfo>, String> {
+        let response = Request::get(&format!("{}/moods", API_BASE))
+            .send()
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if response.ok() {
+            response.json().await.map_err(|e| e.to_string())
+        } else {
+            Err(format!("Failed to fetch moods: {}", response.status()))
         }
     }
 

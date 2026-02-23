@@ -10,7 +10,9 @@ const KEYS: &[&str] = &[
 ];
 
 /// Available moods for the dropdown.
-const MOODS: &[&str] = &["suspense", "eerie", "upbeat", "calm", "ambient", "jazz"];
+const MOODS: &[&str] = &[
+    "suspense", "eerie", "upbeat", "calm", "ambient", "jazz", "show", "orchestral",
+];
 
 /// Props for the PresetEditor component.
 #[derive(Properties, PartialEq)]
