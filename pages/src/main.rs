@@ -15,6 +15,7 @@ enum Tab {
     Orchestral,
     Show,
     Electronic,
+    Euclidean,
     Melodies,
 }
 
@@ -31,6 +32,7 @@ impl Tab {
             Tab::Orchestral => "Orchestral",
             Tab::Show => "Show",
             Tab::Electronic => "Electronic",
+            Tab::Euclidean => "Euclidean",
             Tab::Melodies => "Melodies",
         }
     }
@@ -47,6 +49,7 @@ impl Tab {
             Tab::Orchestral,
             Tab::Show,
             Tab::Electronic,
+            Tab::Euclidean,
             Tab::Melodies,
         ]
     }
@@ -411,6 +414,32 @@ fn render_tab_content(tab: Tab) -> Html {
                     command="midi-cli-rs preset -m chillout -d 5 --seed 2 -o output.wav"
                     audio_src="audio/chillout-2.wav"
                     params={vec![("Seed", "2"), ("Plugin", "electronic")]}
+                />
+            </>
+        },
+        Tab::Euclidean => html! {
+            <>
+                <p class="seed-note">{"Native plugin using Bjorklund's algorithm for polyrhythmic Euclidean patterns:"}</p>
+                <ExampleCard
+                    title="Euclidean - Seed 1"
+                    description="Polyrhythmic patterns with bass and piano layers."
+                    command="midi-cli-rs preset -m euclidean -d 8 --seed 1 --intensity 70 -o output.wav"
+                    audio_src="audio/euclidean-1.wav"
+                    params={vec![("Seed", "1"), ("Plugin", "native")]}
+                />
+                <ExampleCard
+                    title="Euclidean - Seed 2"
+                    description="Different pulse distributions and rhythmic feel."
+                    command="midi-cli-rs preset -m euclidean -d 8 --seed 2 --intensity 70 -o output.wav"
+                    audio_src="audio/euclidean-2.wav"
+                    params={vec![("Seed", "2"), ("Plugin", "native")]}
+                />
+                <ExampleCard
+                    title="Euclidean - Seed 3"
+                    description="Unique interlocking patterns across layers."
+                    command="midi-cli-rs preset -m euclidean -d 8 --seed 3 --intensity 70 -o output.wav"
+                    audio_src="audio/euclidean-3.wav"
+                    params={vec![("Seed", "3"), ("Plugin", "native")]}
                 />
             </>
         },
