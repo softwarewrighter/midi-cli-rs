@@ -4,7 +4,7 @@ CLI tool for AI coding agents to generate MIDI music programmatically.
 
 Generate short music samples (intros, outros, background tracks) for video content using mood presets or explicit note specifications.
 
-**[Try the Live Demo](https://softwarewrighter.github.io/midi-cli-rs/)** - Listen to examples of each mood preset
+**[Try the Live Demo](https://softwarewrighter.github.io/midi-cli-rs/)** - Listen to examples of each mood preset | **[Wiki](https://github.com/softwarewrighter/midi-cli-rs/wiki)** - Architecture, plugins, API reference
 
 ![Demo Page](images/demo-outputs-screenshot.png?ts=1771875504000)
 
