@@ -171,6 +171,7 @@ Compose note-by-note with keyboard shortcuts:
 Load and manage mood plugins from `~/.midi-cli-rs/moods/`:
 - **Electronic Pack** - 8bit, synthwave, techno, chillout moods
 - Plugin moods use base presets with custom parameters
+- See [docs/plugins.md](docs/plugins.md) for creating your own plugins
 
 ![Plugins Tab](images/screenshot-plugins.png?ts=1771875504000)
 
@@ -179,6 +180,7 @@ Load and manage mood plugins from `~/.midi-cli-rs/moods/`:
 | Document | Description |
 |----------|-------------|
 | [docs/usage.md](docs/usage.md) | Comprehensive usage guide for AI agents |
+| [docs/plugins.md](docs/plugins.md) | Plugin system: creating custom moods with TOML |
 | [docs/architecture.md](docs/architecture.md) | System architecture and design |
 | [docs/design.md](docs/design.md) | Detailed design decisions |
 | [docs/prd.md](docs/prd.md) | Product requirements |
