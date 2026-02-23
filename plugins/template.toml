@@ -1,0 +1,68 @@
+# Mood Pack Template
+# Copy this file and customize to create your own mood pack.
+# Install by copying to ~/.midi-cli-rs/moods/
+
+[meta]
+name = "my-mood-pack"        # Unique identifier (no spaces)
+version = "1.0.0"            # Semantic version
+author = "Your Name"         # Optional
+description = "Description of your mood pack"
+
+# Define one or more moods in this pack
+[[moods]]
+name = "my-mood"             # Mood name used in CLI: -m my-mood
+default_key = "Am"           # Default key: C, Cm, D, Dm, Eb, E, Em, F, Fm, G, Gm, A, Am, Bb, Bbm, B, Bm
+default_tempo = 90           # Default BPM (40-200)
+description = "A description of this mood's character"
+
+# Tags help users find your mood (optional)
+tags = ["atmospheric", "dark", "cinematic"]
+
+# Harmony configuration
+[moods.harmony]
+scale = "natural_minor"      # major, natural_minor, harmonic_minor, pentatonic, blues
+tension = 0.3                # 0.0-1.0, higher = more dissonance
+voicing = "spread"           # close, spread, open
+
+# Dynamics configuration
+[moods.dynamics]
+velocity_base = 70           # Base velocity (0-127)
+velocity_range = 20          # +/- variation
+build_curve = "arch"         # flat, crescendo, decrescendo, arch, wave
+
+# Layer definitions
+# Each layer type can have its own instruments and patterns
+
+[moods.layers.foundation]
+instruments = ["strings", "pad"]  # GM instrument names or program numbers
+register = { base = 48, range = 24 }  # MIDI note range
+density = 0.7                # Note density (0.0-1.0)
+pattern = "sustained"        # sustained, arpeggiated, rhythmic
+
+[moods.layers.melody]
+instruments = ["flute", "violin"]
+register = { base = 60, range = 24 }
+density = 0.5
+pattern = "melodic"
+# Melodic-specific options
+contour = "arch"             # ascending, descending, arch, wave, random
+phrase_length = 4            # Notes per phrase
+
+[moods.layers.accent]
+instruments = ["brass", "bells"]
+register = { base = 55, range = 20 }
+density = 0.2
+pattern = "sparse"
+# When accents occur
+accent_on = ["downbeat", "phrase_end"]
+
+[moods.layers.bass]
+instruments = ["contrabass", "bass"]
+register = { base = 36, range = 12 }
+density = 0.6
+pattern = "walking"          # pedal, walking, rhythmic
+
+# You can add more moods to the same pack
+# [[moods]]
+# name = "another-mood"
+# ...

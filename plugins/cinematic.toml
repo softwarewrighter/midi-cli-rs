@@ -1,0 +1,171 @@
+# Cinematic Mood Pack
+# Epic film score style compositions
+
+[meta]
+name = "cinematic"
+version = "1.0.0"
+author = "midi-cli-rs"
+description = "Epic cinematic moods for film scores and trailers"
+
+[[moods]]
+name = "epic"
+default_key = "Dm"
+default_tempo = 80
+description = "Epic orchestral with brass fanfares and driving percussion"
+tags = ["cinematic", "epic", "orchestral", "trailer"]
+
+[moods.harmony]
+scale = "natural_minor"
+tension = 0.4
+voicing = "spread"
+
+[moods.dynamics]
+velocity_base = 80
+velocity_range = 25
+build_curve = "crescendo"
+
+[moods.layers.foundation]
+instruments = ["strings", "tremolo_strings"]
+register = { base = 48, range = 36 }
+density = 0.8
+pattern = "sustained"
+
+[moods.layers.melody]
+instruments = ["french_horn", "trumpet"]
+register = { base = 55, range = 24 }
+density = 0.4
+pattern = "melodic"
+contour = "arch"
+phrase_length = 4
+
+[moods.layers.accent]
+instruments = ["timpani", "orchestral_hit"]
+register = { base = 36, range = 12 }
+density = 0.3
+pattern = "sparse"
+accent_on = ["downbeat"]
+
+[moods.layers.bass]
+instruments = ["contrabass", "tuba"]
+register = { base = 28, range = 16 }
+density = 0.6
+pattern = "pedal"
+
+# ---
+
+[[moods]]
+name = "tension"
+default_key = "Am"
+default_tempo = 70
+description = "Building tension with tremolo strings and sparse piano"
+tags = ["cinematic", "tension", "suspense", "thriller"]
+
+[moods.harmony]
+scale = "harmonic_minor"
+tension = 0.6
+voicing = "close"
+
+[moods.dynamics]
+velocity_base = 50
+velocity_range = 30
+build_curve = "crescendo"
+
+[moods.layers.foundation]
+instruments = ["tremolo_strings"]
+register = { base = 40, range = 24 }
+density = 0.9
+pattern = "sustained"
+
+[moods.layers.accent]
+instruments = ["piano", "celesta"]
+register = { base = 60, range = 24 }
+density = 0.2
+pattern = "sparse"
+
+[moods.layers.bass]
+instruments = ["contrabass"]
+register = { base = 28, range = 12 }
+density = 0.4
+pattern = "pedal"
+
+# ---
+
+[[moods]]
+name = "wonder"
+default_key = "C"
+default_tempo = 72
+description = "Magical wonder with harp, celesta and warm strings"
+tags = ["cinematic", "magical", "wonder", "fantasy"]
+
+[moods.harmony]
+scale = "major"
+tension = 0.1
+voicing = "open"
+
+[moods.dynamics]
+velocity_base = 60
+velocity_range = 15
+build_curve = "wave"
+
+[moods.layers.foundation]
+instruments = ["strings", "pad"]
+register = { base = 48, range = 36 }
+density = 0.7
+pattern = "sustained"
+
+[moods.layers.melody]
+instruments = ["celesta", "glockenspiel"]
+register = { base = 72, range = 24 }
+density = 0.4
+pattern = "arpeggiated"
+
+[moods.layers.accent]
+instruments = ["harp"]
+register = { base = 48, range = 36 }
+density = 0.5
+pattern = "arpeggiated"
+
+# ---
+
+[[moods]]
+name = "heroic"
+default_key = "Bb"
+default_tempo = 100
+description = "Triumphant heroic theme with full brass and percussion"
+tags = ["cinematic", "heroic", "triumphant", "action"]
+
+[moods.harmony]
+scale = "major"
+tension = 0.2
+voicing = "spread"
+
+[moods.dynamics]
+velocity_base = 85
+velocity_range = 20
+build_curve = "arch"
+
+[moods.layers.foundation]
+instruments = ["strings", "french_horn"]
+register = { base = 48, range = 36 }
+density = 0.8
+pattern = "sustained"
+
+[moods.layers.melody]
+instruments = ["trumpet", "french_horn"]
+register = { base = 60, range = 20 }
+density = 0.5
+pattern = "melodic"
+contour = "ascending"
+phrase_length = 4
+
+[moods.layers.accent]
+instruments = ["timpani", "snare_drum"]
+register = { base = 36, range = 12 }
+density = 0.6
+pattern = "rhythmic"
+
+[moods.layers.bass]
+instruments = ["tuba", "contrabass"]
+register = { base = 28, range = 16 }
+density = 0.7
+pattern = "rhythmic"
