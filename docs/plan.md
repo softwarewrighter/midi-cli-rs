@@ -4,11 +4,12 @@
 
 | Phase | Focus | Deliverables | Status |
 |-------|-------|--------------|--------|
-| 1 | Core MIDI Generation | Note parsing, MIDI output | Planned |
-| 2 | CLI Interface | clap-based CLI, JSON input | Planned |
-| 3 | WAV Rendering | FluidSynth integration | Planned |
-| 4 | Mood Presets | Suspense, eerie, upbeat, calm, ambient | Planned |
-| 5 | Polish | Error handling, docs, tests | Planned |
+| 1 | Core MIDI Generation | Note parsing, MIDI output | Complete |
+| 2 | CLI Interface | clap-based CLI, JSON input | Complete |
+| 3 | WAV Rendering | FluidSynth integration | Complete |
+| 4 | Mood Presets | Suspense, eerie, upbeat, calm, ambient, jazz | Complete |
+| 5 | Polish | Error handling, docs, tests, web UI | Complete |
+| 6 | Future Enhancements | Mood packs, plugin architecture, new moods | Planned |
 
 ---
 
@@ -254,7 +255,194 @@
 
 ## Success Metrics
 
-- [ ] AI agent can generate 5-second intro music with single CLI call
-- [ ] Generation + rendering completes in < 2 seconds
-- [ ] Zero licensing concerns for commercial use
-- [ ] 5 distinct mood presets available
+- [x] AI agent can generate 5-second intro music with single CLI call
+- [x] Generation + rendering completes in < 2 seconds
+- [x] Zero licensing concerns for commercial use
+- [x] 6 distinct mood presets available (suspense, eerie, upbeat, calm, ambient, jazz)
+
+---
+
+## Phase 6: Future Mood Enhancements
+
+**Goal**: Extensible mood system with user-defined presets and plugin architecture
+
+### Planned Moods
+
+#### Show/Musical (Broadway/Hollywood Style)
+- **Character**: Dramatic, theatrical, emotionally expressive
+- **Layers**:
+  - Orchestra strings (lush, sweeping)
+  - Brass fanfares and accents
+  - Piano accompaniment (arpeggiated, rhythmic)
+  - Vocal-range melody line (for singability)
+- **Patterns**: Big crescendos, dramatic pauses, key changes
+- **Keys**: Bb, Eb, F (common Broadway keys)
+
+#### Orchestral Family
+Sub-moods sharing orchestral instrumentation with different characters:
+
+| Sub-mood | Character | Tempo | Key | Emphasis |
+|----------|-----------|-------|-----|----------|
+| orchestral-relaxing | Peaceful, flowing | 60-80 | G, D | Strings, woodwinds, harp |
+| orchestral-dark | Ominous, dramatic | 50-70 | Dm, Am | Low brass, timpani, cello |
+| orchestral-energetic | Exciting, driving | 120-140 | C, A | Full orchestra, percussion |
+| orchestral-baroque | Period-authentic | 80-100 | D, G | Harpsichord, strings, counterpoint |
+
+#### Additional Future Moods
+- **cinematic**: Film score style with dynamic arcs
+- **electronic**: Synth-based with arpeggios and pads
+- **world**: Ethnic scales and instruments (pentatonic, modes)
+- **lo-fi**: Jazzy chords with tape-style warmth
+- **chiptune**: 8-bit style with square/triangle waves
+
+### 6.1 Mood Pack Architecture
+
+**Goal**: Allow mood presets to be defined as data files rather than compiled code
+
+#### MoodPack Format (TOML/JSON)
+
+```toml
+# ~/.midi-cli-rs/moods/cinematic.toml
+[mood]
+name = "cinematic"
+description = "Epic film score style with dynamic builds"
+aliases = ["film", "movie", "epic"]
+default_key = "Dm"
+default_tempo = 90
+
+[[layers]]
+name = "strings_pad"
+instrument_pool = ["strings", "tremolo_strings", "string_ensemble_1"]
+register = "mid"        # low, mid, high
+role = "foundation"     # foundation, melody, accent, texture
+probability = 1.0       # always include
+pattern = "sustained"   # sustained, arpeggiated, rhythmic, sparse
+
+[[layers]]
+name = "brass_hits"
+instrument_pool = ["french_horn", "trombone", "trumpet"]
+register = "mid"
+role = "accent"
+probability = 0.7
+pattern = "sparse"
+trigger = "downbeat"    # downbeat, upbeat, random
+
+[[layers]]
+name = "timpani"
+instrument_pool = ["timpani", "orchestral_hit"]
+register = "low"
+role = "accent"
+probability = 0.5
+pattern = "rhythmic"
+
+[dynamics]
+build_curve = "crescendo"  # crescendo, decrescendo, wave, flat
+intensity_map = { low = 0.3, mid = 0.6, high = 1.0 }
+
+[harmony]
+scale = "natural_minor"
+chord_progression = ["i", "VI", "III", "VII"]  # Roman numeral
+tension_intervals = [6, 11]  # tritone, major 7th
+```
+
+#### Rust Struct Serialization
+
+```rust
+#[derive(Serialize, Deserialize, Clone)]
+pub struct MoodPack {
+    pub mood: MoodMeta,
+    pub layers: Vec<LayerDef>,
+    pub dynamics: DynamicsDef,
+    pub harmony: HarmonyDef,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct LayerDef {
+    pub name: String,
+    pub instrument_pool: Vec<String>,
+    pub register: Register,
+    pub role: LayerRole,
+    pub probability: f64,
+    pub pattern: PatternType,
+    #[serde(default)]
+    pub trigger: Option<TriggerType>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub enum PatternType {
+    Sustained,
+    Arpeggiated { intervals: Vec<i8>, rhythm: Vec<f64> },
+    Rhythmic { pattern: Vec<f64> },
+    Sparse { density: f64 },
+    Walking { style: WalkingStyle },
+    Melodic { contour: Vec<i8> },
+}
+```
+
+### 6.2 MoodPack Loading
+
+```rust
+// Load built-in moods
+let builtin = MoodRegistry::load_builtin();
+
+// Load user mood packs from ~/.midi-cli-rs/moods/
+let user_packs = MoodRegistry::load_from_dir("~/.midi-cli-rs/moods/")?;
+
+// CLI: list all available moods
+midi-cli-rs moods --all
+
+// CLI: use a mood pack
+midi-cli-rs preset --mood cinematic -d 10 -o epic.wav
+
+// CLI: export built-in mood as editable pack
+midi-cli-rs mood-export jazz --output ~/.midi-cli-rs/moods/my-jazz.toml
+
+// CLI: validate a mood pack
+midi-cli-rs mood-validate ~/.midi-cli-rs/moods/custom.toml
+```
+
+### 6.3 Interactive Mood Editor (Web UI)
+
+Extend the web UI to support mood pack editing:
+
+- Visual layer editor with drag-and-drop
+- Instrument pool selector with audio preview
+- Pattern designer with piano roll visualization
+- Real-time preview while editing
+- Export to TOML/JSON for sharing
+
+### 6.4 Mood Pack Repository
+
+Future: Community mood pack sharing
+
+```bash
+# Install mood pack from repository
+midi-cli-rs mood-install epic-orchestral
+
+# List available mood packs
+midi-cli-rs mood-search "orchestral"
+
+# Share your mood pack
+midi-cli-rs mood-publish ~/.midi-cli-rs/moods/my-mood.toml
+```
+
+### Tasks
+
+- [ ] **6.1** Define MoodPack serialization format (TOML)
+- [ ] **6.2** Implement MoodPack struct with serde
+- [ ] **6.3** Create MoodRegistry for loading packs from disk
+- [ ] **6.4** Implement `mood-export` CLI command
+- [ ] **6.5** Implement `mood-validate` CLI command
+- [ ] **6.6** Add user mood directory scanning
+- [ ] **6.7** Implement Show/Musical preset (compiled)
+- [ ] **6.8** Implement Orchestral family presets (compiled)
+- [ ] **6.9** Web UI mood editor component
+- [ ] **6.10** Mood pack repository integration
+
+### Acceptance Criteria
+
+- [ ] User can create custom moods via TOML files
+- [ ] Built-in moods can be exported and modified
+- [ ] Custom moods produce valid, musical output
+- [ ] Web UI allows visual mood editing
+- [ ] 10+ moods available (built-in + examples)
