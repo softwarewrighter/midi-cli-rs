@@ -354,7 +354,10 @@ fn run(command: Commands) -> Result<(), Box<dyn std::error::Error>> {
         } => {
             // Parse mood
             let mood_enum = Mood::parse(&mood).ok_or_else(|| {
-                format!("Unknown mood: {mood}. Available: suspense, eerie, upbeat, calm, ambient")
+                format!(
+                    "Unknown mood: {mood}. Built-in moods: suspense, eerie, upbeat, calm, ambient, jazz, show, orchestral. \
+                    Note: Plugin moods shown in 'moods' command are metadata only - audio generation not yet implemented."
+                )
             })?;
 
             // Parse key (or use mood default)

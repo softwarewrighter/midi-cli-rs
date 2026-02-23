@@ -1,6 +1,6 @@
 //! Preset editor form component.
 
-use crate::api::{PresetRequest, SavedPreset};
+use crate::api::{ApiClient, MoodInfo, PresetRequest, SavedPreset};
 use web_sys::HtmlInputElement;
 use yew::prelude::*;
 
@@ -9,8 +9,8 @@ const KEYS: &[&str] = &[
     "C", "Cm", "D", "Dm", "Eb", "E", "Em", "F", "Fm", "G", "Gm", "A", "Am", "Bb", "B", "Bm",
 ];
 
-/// Available moods for the dropdown.
-const MOODS: &[&str] = &[
+/// Fallback moods if API fetch fails.
+const FALLBACK_MOODS: &[&str] = &[
     "suspense", "eerie", "upbeat", "calm", "ambient", "jazz", "show", "orchestral",
 ];
 
@@ -107,6 +107,24 @@ pub fn preset_editor(props: &PresetEditorProps) -> Html {
             .map(FormState::from_preset)
             .unwrap_or_else(FormState::new)
     });
+
+    // State for dynamically loaded moods
+    let moods = use_state(|| Vec::<MoodInfo>::new());
+
+    // Fetch moods from API on mount
+    {
+        let moods = moods.clone();
+        use_effect_with((), move |_| {
+            wasm_bindgen_futures::spawn_local(async move {
+                match ApiClient::list_moods().await {
+                    Ok(mood_list) => moods.set(mood_list),
+                    Err(e) => {
+                        web_sys::console::error_1(&format!("Failed to fetch moods: {}", e).into());
+                    }
+                }
+            });
+        });
+    }
 
     // Update form when editing prop changes
     {
@@ -241,12 +259,31 @@ pub fn preset_editor(props: &PresetEditorProps) -> Html {
                     <div class="form-group">
                         <label for="mood">{"Mood"}</label>
                         <select id="mood" key={form.mood.clone()} onchange={on_mood_change}>
-                            { for MOODS.iter().map(|m| {
-                                let is_selected = form.mood == *m;
+                            { if moods.is_empty() {
+                                // Fallback to built-in moods if API hasn't loaded yet
                                 html! {
-                                    <option value={*m} selected={is_selected}>{m}</option>
+                                    { for FALLBACK_MOODS.iter().map(|m| {
+                                        let is_selected = form.mood == *m;
+                                        html! {
+                                            <option value={*m} selected={is_selected}>{m}</option>
+                                        }
+                                    })}
                                 }
-                            })}
+                            } else {
+                                html! {
+                                    { for moods.iter().map(|m| {
+                                        let is_selected = form.mood == m.name;
+                                        let label = if m.source.starts_with("plugin:") {
+                                            format!("{} ({})", m.name, m.source.trim_start_matches("plugin:"))
+                                        } else {
+                                            m.name.clone()
+                                        };
+                                        html! {
+                                            <option value={m.name.clone()} selected={is_selected}>{label}</option>
+                                        }
+                                    })}
+                                }
+                            }}
                         </select>
                     </div>
 
