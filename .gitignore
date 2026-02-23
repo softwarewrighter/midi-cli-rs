@@ -27,6 +27,9 @@
 
 # Demo page audio files (committed for GitHub Pages)
 !pages/audio/*.wav
+!pages/audio/*.mid
+!pages/dist/audio/*.wav
+!pages/dist/audio/*.mid
 
 # Binary and build artifacts
 *.exe
