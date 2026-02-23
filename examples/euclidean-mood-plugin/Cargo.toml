@@ -1,0 +1,13 @@
+[package]
+name = "euclidean-mood-plugin"
+version = "1.0.0"
+edition = "2021"
+authors = ["midi-cli-rs contributors"]
+description = "Euclidean rhythm generator plugin for midi-cli-rs"
+license = "MIT"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+# No external dependencies needed for this plugin

@@ -1,0 +1,20 @@
+# Euclidean Rhythm Mood Pack
+# Copy this file and the compiled library to ~/.midi-cli-rs/moods/
+
+[pack]
+name = "euclidean"
+version = "1.0.0"
+author = "midi-cli-rs contributors"
+description = "Euclidean rhythm generator using Bjorklund's algorithm"
+
+[pack.native]
+# The library name - platform extension (.dylib/.so/.dll) is auto-detected
+library = "libeuclidean_mood_plugin"
+hot_reload = false
+
+[[moods]]
+name = "euclidean"
+description = "Polyrhythmic patterns using Bjorklund's algorithm"
+default_key = "Am"
+default_tempo = 100
+tags = ["algorithmic", "polyrhythm", "world"]

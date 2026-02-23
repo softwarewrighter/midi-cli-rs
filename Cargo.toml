@@ -1,5 +1,5 @@
 [workspace]
-exclude = ["web", "pages"]
+exclude = ["web", "pages", "examples/euclidean-mood-plugin"]
 
 [package]
 name = "midi-cli-rs"
@@ -16,8 +16,9 @@ name = "midi-cli-rs"
 path = "src/main.rs"
 
 [features]
-default = ["server"]
+default = ["server", "native-plugins"]
 server = ["axum", "tower", "tower-http", "tokio", "uuid"]
+native-plugins = ["libloading"]
 
 [dependencies]
 # MIDI generation (MIT/Apache-2.0)
@@ -46,6 +47,9 @@ tower-http = { version = "0.5", features = ["fs", "cors"], optional = true }
 tokio = { version = "1", features = ["full"], optional = true }
 uuid = { version = "1", features = ["v4"], optional = true }
 toml = "1.0.3"
+
+# Dynamic library loading for native plugins (optional, MIT)
+libloading = { version = "0.8", optional = true }
 
 [dev-dependencies]
 tempfile = "3"

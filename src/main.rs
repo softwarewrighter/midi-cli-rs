@@ -12,6 +12,8 @@ use midi_cli_rs::{
 use midi_cli_rs::{lookup_plugin_mood, PluginMoodInfo};
 #[cfg(feature = "server")]
 use midi_cli_rs::server;
+#[cfg(feature = "native-plugins")]
+use midi_cli_rs::{generate_with_native_plugin, is_native_plugin_mood, list_native_plugin_moods};
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
@@ -353,10 +355,25 @@ fn run(command: Commands) -> Result<(), Box<dyn std::error::Error>> {
             soundfont,
             verbose,
         } => {
-            // Try to parse as built-in mood first
-            let (mood_enum, plugin_overrides): (Mood, Option<PluginMoodInfo>) =
-                if let Some(m) = Mood::parse(&mood) {
-                    (m, None)
+            // Get moods directory for plugin lookup
+            #[cfg(any(feature = "server", feature = "native-plugins"))]
+            let moods_dir = std::env::var("HOME")
+                .map(|h| std::path::PathBuf::from(h).join(".midi-cli-rs/moods"))
+                .unwrap_or_else(|_| std::path::PathBuf::from(".midi-cli-rs/moods"));
+
+            // Check if this is a native plugin mood
+            #[cfg(feature = "native-plugins")]
+            let is_native = is_native_plugin_mood(&mood, &moods_dir);
+            #[cfg(not(feature = "native-plugins"))]
+            let is_native = false;
+
+            // Try to parse as built-in mood first (skip if native plugin)
+            let (mood_enum, plugin_overrides): (Option<Mood>, Option<PluginMoodInfo>) =
+                if is_native {
+                    // Native plugin - no built-in mood enum needed
+                    (None, None)
+                } else if let Some(m) = Mood::parse(&mood) {
+                    (Some(m), None)
                 } else {
                     // Check if it's a plugin mood with base_mood
                     #[cfg(feature = "server")]
@@ -364,7 +381,7 @@ fn run(command: Commands) -> Result<(), Box<dyn std::error::Error>> {
                         if let Some(plugin_mood) = lookup_plugin_mood(&mood) {
                             if let Some(ref base) = plugin_mood.base_mood {
                                 if let Some(base_enum) = Mood::parse(base) {
-                                    (base_enum, Some(plugin_mood))
+                                    (Some(base_enum), Some(plugin_mood))
                                 } else {
                                     return Err(format!(
                                         "Plugin mood '{}' has invalid base_mood '{}'. Valid base moods: suspense, eerie, upbeat, calm, ambient, jazz, show, orchestral.",
@@ -397,9 +414,14 @@ fn run(command: Commands) -> Result<(), Box<dyn std::error::Error>> {
                 Key::parse(&k)
                     .ok_or_else(|| format!("Unknown key: {k}. Examples: C, Am, F#m, Bb"))?
             } else if let Some(ref plugin) = plugin_overrides {
-                Key::parse(&plugin.default_key).unwrap_or_else(|| mood_enum.default_key())
+                Key::parse(&plugin.default_key).unwrap_or_else(|| {
+                    mood_enum.map(|m| m.default_key()).unwrap_or(Key::C)
+                })
+            } else if is_native {
+                // Native plugins default to Am for algorithmic moods
+                Key::Am
             } else {
-                mood_enum.default_key()
+                mood_enum.map(|m| m.default_key()).unwrap_or(Key::C)
             };
 
             // Apply plugin tempo/intensity overrides if not specified on CLI
@@ -438,8 +460,23 @@ fn run(command: Commands) -> Result<(), Box<dyn std::error::Error>> {
                 tempo: final_tempo,
             };
 
-            // Generate sequences
-            let sequences = generate_mood(mood_enum, &config);
+            // Generate sequences - use native plugin if available
+            let sequences = if is_native {
+                #[cfg(feature = "native-plugins")]
+                {
+                    generate_with_native_plugin(&mood, &config, &moods_dir).map_err(|e| {
+                        format!("Native plugin generation failed: {}", e)
+                    })?
+                }
+                #[cfg(not(feature = "native-plugins"))]
+                {
+                    return Err("Native plugins are not enabled. Rebuild with --features native-plugins".into());
+                }
+            } else if let Some(m) = mood_enum {
+                generate_mood(m, &config)
+            } else {
+                return Err("No mood generator available".into());
+            };
 
             if sequences.is_empty() {
                 return Err("No sequences generated".into());
@@ -448,7 +485,9 @@ fn run(command: Commands) -> Result<(), Box<dyn std::error::Error>> {
             // Verbose output
             if verbose {
                 eprintln!("--- Preset Generation Details ---");
-                if plugin_overrides.is_some() {
+                if is_native {
+                    eprintln!("Native Plugin Mood: {}", mood);
+                } else if plugin_overrides.is_some() {
                     eprintln!("Plugin Mood: {} (base: {:?})", mood, mood_enum);
                 } else {
                     eprintln!("Mood: {:?}", mood_enum);
@@ -486,13 +525,23 @@ fn run(command: Commands) -> Result<(), Box<dyn std::error::Error>> {
 
             // Write MIDI file
             write_midi(&sequences, &midi_path)?;
-            eprintln!(
-                "Generated {:?} preset (seed: {}, key: {:?}): {}",
-                mood_enum,
-                config.seed,
-                key_enum,
-                midi_path.display()
-            );
+            if is_native {
+                eprintln!(
+                    "Generated {} preset (native plugin, seed: {}, key: {:?}): {}",
+                    mood,
+                    config.seed,
+                    key_enum,
+                    midi_path.display()
+                );
+            } else {
+                eprintln!(
+                    "Generated {:?} preset (seed: {}, key: {:?}): {}",
+                    mood_enum.unwrap_or(Mood::Calm),
+                    config.seed,
+                    key_enum,
+                    midi_path.display()
+                );
+            }
 
             // Render to WAV if requested
             if ext == "wav" {
@@ -618,6 +667,22 @@ fn run(command: Commands) -> Result<(), Box<dyn std::error::Error>> {
                         }
                     }
                 }
+
+            // Native plugins
+            #[cfg(feature = "native-plugins")]
+            {
+                let native_moods = list_native_plugin_moods(&moods_dir);
+                if !native_moods.is_empty() {
+                    let mut current_pack = String::new();
+                    for (name, pack, desc) in native_moods {
+                        if pack != current_pack {
+                            println!("\n[Native Plugin: {}]", pack);
+                            current_pack = pack;
+                        }
+                        println!("{:<12} {:<8} {}", name, "-", desc);
+                    }
+                }
+            }
 
             println!("\nUsage: midi-cli-rs preset --mood suspense --duration 5 -o out.wav");
             println!("       midi-cli-rs preset -m jazz -d 10 --key Bb --seed 42 -o nightclub.wav");

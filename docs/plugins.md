@@ -492,8 +492,38 @@ name = "test"
 name = "test"
 ```
 
+## Native Plugins
+
+For advanced users who need custom generation algorithms (not just parameter overrides), midi-cli-rs supports **native plugins** - shared libraries that implement custom mood generators.
+
+Native plugins can:
+- Implement entirely new algorithmic approaches (e.g., Euclidean rhythms, L-systems, Markov chains)
+- Use external data or APIs
+- Achieve higher performance for complex algorithms
+
+See [Native Plugin Development Guide](native-plugins.md) for details.
+
+### Quick Example
+
+```toml
+# ~/.midi-cli-rs/moods/euclidean.toml
+[pack]
+name = "euclidean"
+version = "1.0.0"
+
+[pack.native]
+library = "libeuclidean_mood_plugin"
+
+[[moods]]
+name = "euclidean"
+description = "Polyrhythmic patterns using Bjorklund's algorithm"
+default_key = "Am"
+default_tempo = 100
+```
+
 ## See Also
 
+- [Native Plugin Development Guide](native-plugins.md)
 - [Architecture Documentation](architecture.md)
 - [Design Documentation](design.md)
 - [Usage Guide](usage.md)

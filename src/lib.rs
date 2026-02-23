@@ -4,6 +4,8 @@
 //! note sequences, instrument selection, and mood presets.
 
 pub mod midi;
+#[cfg(feature = "native-plugins")]
+pub mod plugin;
 pub mod preset;
 #[cfg(feature = "server")]
 pub mod server;
@@ -19,3 +21,10 @@ pub use preset::{Key, Mood, MoodGenerator, PresetConfig, generate_mood};
 // Re-export plugin-related types and functions for CLI use
 #[cfg(feature = "server")]
 pub use server::api::{get_moods_dir, lookup_plugin_mood, PluginMoodInfo};
+
+// Re-export native plugin types when feature is enabled
+#[cfg(feature = "native-plugins")]
+pub use plugin::{
+    generate_with_native_plugin, is_native_plugin_mood, list_native_plugin_moods,
+    NativePluginInfo, PluginLoadError, PluginRegistry,
+};
