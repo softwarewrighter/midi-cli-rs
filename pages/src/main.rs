@@ -11,6 +11,10 @@ enum Tab {
     Calm,
     Ambient,
     Jazz,
+    Chiptune,
+    Orchestral,
+    Show,
+    Electronic,
     Melodies,
 }
 
@@ -23,6 +27,10 @@ impl Tab {
             Tab::Calm => "Calm",
             Tab::Ambient => "Ambient",
             Tab::Jazz => "Jazz",
+            Tab::Chiptune => "Chiptune",
+            Tab::Orchestral => "Orchestral",
+            Tab::Show => "Show",
+            Tab::Electronic => "Electronic",
             Tab::Melodies => "Melodies",
         }
     }
@@ -35,6 +43,10 @@ impl Tab {
             Tab::Calm,
             Tab::Ambient,
             Tab::Jazz,
+            Tab::Chiptune,
+            Tab::Orchestral,
+            Tab::Show,
+            Tab::Electronic,
             Tab::Melodies,
         ]
     }
@@ -256,6 +268,149 @@ fn render_tab_content(tab: Tab) -> Html {
                     command="midi-cli-rs preset -m jazz -d 5 --seed 3 -o output.wav"
                     audio_src="audio/jazz-3.wav"
                     params={vec![("Seed", "3")]}
+                />
+            </>
+        },
+        Tab::Chiptune => html! {
+            <>
+                <p class="seed-note">{"8-bit video game style music. Each seed produces dramatically different output:"}</p>
+                <ExampleCard
+                    title="Chiptune - Seed 1"
+                    description="Square wave leads with synth bass."
+                    command="midi-cli-rs preset -m chiptune -d 5 --seed 1 -o output.wav"
+                    audio_src="audio/chiptune-1.wav"
+                    params={vec![("Seed", "1")]}
+                />
+                <ExampleCard
+                    title="Chiptune - Seed 2"
+                    description="Different scale, rhythm, and layer combination."
+                    command="midi-cli-rs preset -m chiptune -d 5 --seed 2 -o output.wav"
+                    audio_src="audio/chiptune-2.wav"
+                    params={vec![("Seed", "2")]}
+                />
+                <ExampleCard
+                    title="Chiptune - Seed 3"
+                    description="Unique melodic pattern with percussion."
+                    command="midi-cli-rs preset -m chiptune -d 5 --seed 3 -o output.wav"
+                    audio_src="audio/chiptune-3.wav"
+                    params={vec![("Seed", "3")]}
+                />
+            </>
+        },
+        Tab::Orchestral => html! {
+            <>
+                <p class="seed-note">{"Cinematic orchestral arrangements with strings, brass, and woodwinds:"}</p>
+                <ExampleCard
+                    title="Orchestral - Seed 1"
+                    description="Full orchestral texture with layered instruments."
+                    command="midi-cli-rs preset -m orchestral -d 5 --seed 1 -o output.wav"
+                    audio_src="audio/orchestral-1.wav"
+                    params={vec![("Seed", "1")]}
+                />
+                <ExampleCard
+                    title="Orchestral - Seed 2"
+                    description="Different voicing and instrument balance."
+                    command="midi-cli-rs preset -m orchestral -d 5 --seed 2 -o output.wav"
+                    audio_src="audio/orchestral-2.wav"
+                    params={vec![("Seed", "2")]}
+                />
+                <ExampleCard
+                    title="Orchestral - Seed 3"
+                    description="Varied melodic contours and dynamics."
+                    command="midi-cli-rs preset -m orchestral -d 5 --seed 3 -o output.wav"
+                    audio_src="audio/orchestral-3.wav"
+                    params={vec![("Seed", "3")]}
+                />
+            </>
+        },
+        Tab::Show => html! {
+            <>
+                <p class="seed-note">{"Broadway/musical theater style with piano, brass, and strings:"}</p>
+                <ExampleCard
+                    title="Show - Seed 1"
+                    description="Theatrical fanfare with big band feel."
+                    command="midi-cli-rs preset -m show -d 5 --seed 1 -o output.wav"
+                    audio_src="audio/show-1.wav"
+                    params={vec![("Seed", "1")]}
+                />
+                <ExampleCard
+                    title="Show - Seed 2"
+                    description="Different brass voicings and rhythms."
+                    command="midi-cli-rs preset -m show -d 5 --seed 2 -o output.wav"
+                    audio_src="audio/show-2.wav"
+                    params={vec![("Seed", "2")]}
+                />
+                <ExampleCard
+                    title="Show - Seed 3"
+                    description="Unique melodic flourishes and dynamics."
+                    command="midi-cli-rs preset -m show -d 5 --seed 3 -o output.wav"
+                    audio_src="audio/show-3.wav"
+                    params={vec![("Seed", "3")]}
+                />
+            </>
+        },
+        Tab::Electronic => html! {
+            <>
+                <p class="seed-note">{"Plugin moods from the electronic pack (~/.midi-cli-rs/moods/):"}</p>
+                <h3 class="subsection">{"8bit (via chiptune)"}</h3>
+                <ExampleCard
+                    title="8bit - Seed 1"
+                    description="Retro video game music with square waves."
+                    command="midi-cli-rs preset -m 8bit -d 5 --seed 1 -o output.wav"
+                    audio_src="audio/8bit-1.wav"
+                    params={vec![("Seed", "1"), ("Plugin", "electronic")]}
+                />
+                <ExampleCard
+                    title="8bit - Seed 2"
+                    description="Different melodic pattern and layers."
+                    command="midi-cli-rs preset -m 8bit -d 5 --seed 2 -o output.wav"
+                    audio_src="audio/8bit-2.wav"
+                    params={vec![("Seed", "2"), ("Plugin", "electronic")]}
+                />
+                <h3 class="subsection">{"Synthwave (via upbeat)"}</h3>
+                <ExampleCard
+                    title="Synthwave - Seed 1"
+                    description="80s retro synth vibes in A minor."
+                    command="midi-cli-rs preset -m synthwave -d 5 --seed 1 -o output.wav"
+                    audio_src="audio/synthwave-1.wav"
+                    params={vec![("Seed", "1"), ("Plugin", "electronic")]}
+                />
+                <ExampleCard
+                    title="Synthwave - Seed 2"
+                    description="Different rhythm and bass patterns."
+                    command="midi-cli-rs preset -m synthwave -d 5 --seed 2 -o output.wav"
+                    audio_src="audio/synthwave-2.wav"
+                    params={vec![("Seed", "2"), ("Plugin", "electronic")]}
+                />
+                <h3 class="subsection">{"Techno (via upbeat)"}</h3>
+                <ExampleCard
+                    title="Techno - Seed 1"
+                    description="High-energy electronic beats at 130 BPM."
+                    command="midi-cli-rs preset -m techno -d 5 --seed 1 -o output.wav"
+                    audio_src="audio/techno-1.wav"
+                    params={vec![("Seed", "1"), ("Plugin", "electronic")]}
+                />
+                <ExampleCard
+                    title="Techno - Seed 2"
+                    description="Different synth patterns and intensity."
+                    command="midi-cli-rs preset -m techno -d 5 --seed 2 -o output.wav"
+                    audio_src="audio/techno-2.wav"
+                    params={vec![("Seed", "2"), ("Plugin", "electronic")]}
+                />
+                <h3 class="subsection">{"Chillout (via ambient)"}</h3>
+                <ExampleCard
+                    title="Chillout - Seed 1"
+                    description="Relaxing downtempo ambient at 85 BPM."
+                    command="midi-cli-rs preset -m chillout -d 5 --seed 1 -o output.wav"
+                    audio_src="audio/chillout-1.wav"
+                    params={vec![("Seed", "1"), ("Plugin", "electronic")]}
+                />
+                <ExampleCard
+                    title="Chillout - Seed 2"
+                    description="Different textures and pad movements."
+                    command="midi-cli-rs preset -m chillout -d 5 --seed 2 -o output.wav"
+                    audio_src="audio/chillout-2.wav"
+                    params={vec![("Seed", "2"), ("Plugin", "electronic")]}
                 />
             </>
         },

@@ -6,7 +6,7 @@ Generate short music samples (intros, outros, background tracks) for video conte
 
 **[Try the Live Demo](https://softwarewrighter.github.io/midi-cli-rs/)** - Listen to examples of each mood preset
 
-![Demo Page](images/demo-outputs-screenshot.png?ts=1771547936000)
+![Demo Page](images/demo-outputs-screenshot.png?ts=1771875504000)
 
 ## Features
 
@@ -73,6 +73,18 @@ The binary will be at `./target/release/midi-cli-rs`.
 | `calm` | G | Warm pads, gentle arpeggios |
 | `ambient` | Em | Textural drones, pentatonic bells |
 | `jazz` | F | Walking bass, piano comping, swing |
+| `chiptune` | C | 8-bit video game style, square waves |
+| `orchestral` | C | Cinematic strings, brass, woodwinds |
+| `show` | Bb | Broadway/musical theater, big band |
+
+**Plugin Moods** (from `~/.midi-cli-rs/moods/electronic.toml`):
+
+| Mood | Base | Default Key | Character |
+|------|------|-------------|-----------|
+| `8bit` | chiptune | C | Retro game music at 140 BPM |
+| `synthwave` | upbeat | Am | 80s synth vibes at 118 BPM |
+| `techno` | upbeat | Dm | Electronic beats at 130 BPM |
+| `chillout` | ambient | Em | Relaxing downtempo at 85 BPM |
 
 ```bash
 midi-cli-rs preset \
@@ -142,7 +154,7 @@ Create mood-based compositions with adjustable parameters:
 - **Mood, Key, Duration, Intensity, Tempo** - Core composition settings
 - **Seed** - Use 0 for random, or click the clock button to fill with ms-since-epoch for unique reproducible results
 
-![Presets Tab](images/screenshot-presets.png?ts=1771545798000)
+![Presets Tab](images/screenshot-presets.png?ts=1771875504000)
 
 ### Melodies Tab
 Compose note-by-note with keyboard shortcuts:
@@ -153,7 +165,14 @@ Compose note-by-note with keyboard shortcuts:
 - `+` / `-` - Change octave
 - `Esc` - Exit note editing mode
 
-![Melodies Tab](images/screenshot-melodies.png?ts=1771545798000)
+![Melodies Tab](images/screenshot-melodies.png?ts=1771875504000)
+
+### Plugins Tab
+Load and manage mood plugins from `~/.midi-cli-rs/moods/`:
+- **Electronic Pack** - 8bit, synthwave, techno, chillout moods
+- Plugin moods use base presets with custom parameters
+
+![Plugins Tab](images/screenshot-plugins.png?ts=1771875504000)
 
 ## Documentation
 
