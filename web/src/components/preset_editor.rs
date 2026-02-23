@@ -11,7 +11,7 @@ const KEYS: &[&str] = &[
 
 /// Fallback moods if API fetch fails.
 const FALLBACK_MOODS: &[&str] = &[
-    "suspense", "eerie", "upbeat", "calm", "ambient", "jazz", "show", "orchestral",
+    "suspense", "eerie", "upbeat", "calm", "ambient", "jazz", "show", "orchestral", "chiptune",
 ];
 
 /// Props for the PresetEditor component.

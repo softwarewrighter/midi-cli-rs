@@ -189,7 +189,7 @@ fn generate_arpeggio(
 
         // Apply contour pattern to determine next note
         let direction = contour[phrase_position % contour.len()];
-        let step = variation.get_interval(rng) as i8;
+        let step = variation.get_interval(rng);
 
         match direction {
             1 => {
@@ -213,9 +213,9 @@ fn generate_arpeggio(
         }
 
         // Keep scale_index in valid range
-        scale_index = scale_index % (scale.len() * 2);
+        scale_index %= scale.len() * 2;
         if scale_index >= scale.len() {
-            scale_index = scale_index % scale.len();
+            scale_index %= scale.len();
         }
 
         phrase_position += 1;

@@ -303,7 +303,7 @@ fn generate_melody_line(
     let vocal_range = 24u8;
 
     // Phrase structure
-    let phrase_length = variation.phrase_length.max(4).min(8) as usize;
+    let phrase_length = variation.phrase_length.clamp(4, 8) as usize;
     let contour = variation.get_contour(phrase_length);
 
     // Melody style

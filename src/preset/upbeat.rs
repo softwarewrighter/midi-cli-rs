@@ -283,7 +283,7 @@ fn generate_melody_hint(
     let mut notes = Vec::new();
 
     // Number of notes varies with seed
-    let num_notes = (variation.phrase_length as usize).max(3).min(8);
+    let num_notes = (variation.phrase_length as usize).clamp(3, 8);
 
     // Start position varies
     let start_pos = beats * (0.3 + variation.density_factor * 0.3);

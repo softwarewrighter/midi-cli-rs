@@ -500,7 +500,7 @@ mod tests {
         // Should have at least bass (always included)
         assert!(!sequences.is_empty());
         // Most seeds will produce 2-4 layers
-        assert!(sequences.len() >= 1 && sequences.len() <= 4);
+        assert!((1..=4).contains(&sequences.len()));
     }
 
     #[test]

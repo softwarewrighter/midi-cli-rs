@@ -34,7 +34,9 @@ A Rust CLI tool for AI coding agents to generate MIDI music with mood presets.
 
 ### Moods
 
-suspense, eerie, upbeat, calm, ambient, jazz
+suspense, eerie, upbeat, calm, ambient, jazz, chiptune, orchestral, show
+
+Plugin moods (in ~/.midi-cli-rs/moods/): synthwave, techno, chillout, 8bit
 
 ### Seed Behavior
 

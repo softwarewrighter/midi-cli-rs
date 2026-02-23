@@ -1,111 +1,45 @@
 # Electronic Mood Pack
 # Synth-based electronic music styles
+# Each mood specifies a base_mood (built-in) for audio generation
 
 [pack]
 name = "electronic"
-version = "1.0.0"
+version = "1.1.0"
 author = "midi-cli-rs"
 description = "Electronic and synth-based moods"
 
 [[moods]]
 name = "synthwave"
+base_mood = "upbeat"          # Uses upbeat generator with these overrides
 default_key = "Am"
 default_tempo = 118
+default_intensity = 65
 description = "80s inspired synthwave with arpeggios and bass"
 tags = ["electronic", "synthwave", "retro", "80s"]
 
-[moods.harmony]
-scale = "natural_minor"
-tension = 0.2
-voicing = "spread"
-
-[moods.dynamics]
-velocity_base = 75
-velocity_range = 15
-build_curve = "flat"
-
-[moods.layers.foundation]
-instruments = ["synth_pad", "synth_strings"]
-register = { base = 48, range = 24 }
-density = 0.8
-pattern = "sustained"
-
-[moods.layers.melody]
-instruments = ["synth_lead", "square_lead"]
-register = { base = 60, range = 24 }
-density = 0.5
-pattern = "arpeggiated"
-
-[moods.layers.bass]
-instruments = ["synth_bass", "bass"]
-register = { base = 36, range = 12 }
-density = 0.8
-pattern = "rhythmic"
-
-# ---
-
 [[moods]]
 name = "chillout"
+base_mood = "ambient"         # Uses ambient generator
 default_key = "Em"
 default_tempo = 85
+default_intensity = 40
 description = "Relaxed downtempo electronic"
 tags = ["electronic", "chill", "downtempo", "ambient"]
 
-[moods.harmony]
-scale = "pentatonic"
-tension = 0.1
-voicing = "open"
-
-[moods.dynamics]
-velocity_base = 55
-velocity_range = 20
-build_curve = "wave"
-
-[moods.layers.foundation]
-instruments = ["synth_pad", "warm_pad"]
-register = { base = 48, range = 36 }
-density = 0.6
-pattern = "sustained"
-
-[moods.layers.melody]
-instruments = ["electric_piano", "synth_bell"]
-register = { base = 60, range = 24 }
-density = 0.3
-pattern = "sparse"
-
-[moods.layers.accent]
-instruments = ["synth_chime", "marimba"]
-register = { base = 72, range = 24 }
-density = 0.2
-pattern = "sparse"
-
-# ---
-
 [[moods]]
 name = "techno"
+base_mood = "upbeat"          # Uses upbeat generator at high tempo
 default_key = "Dm"
 default_tempo = 130
+default_intensity = 85
 description = "Driving techno with pumping bass"
 tags = ["electronic", "techno", "dance", "club"]
 
-[moods.harmony]
-scale = "natural_minor"
-tension = 0.3
-voicing = "close"
-
-[moods.dynamics]
-velocity_base = 90
-velocity_range = 10
-build_curve = "flat"
-
-[moods.layers.foundation]
-instruments = ["synth_bass"]
-register = { base = 36, range = 12 }
-density = 1.0
-pattern = "rhythmic"
-
-[moods.layers.accent]
-instruments = ["synth_lead"]
-register = { base = 60, range = 24 }
-density = 0.4
-pattern = "sparse"
+[[moods]]
+name = "8bit"
+base_mood = "chiptune"        # Uses dedicated chiptune generator
+default_key = "C"
+default_tempo = 140
+default_intensity = 70
+description = "Retro 8-bit video game style chiptune"
+tags = ["electronic", "8bit", "chiptune", "retro", "game"]

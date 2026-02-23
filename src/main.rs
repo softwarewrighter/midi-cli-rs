@@ -2,15 +2,16 @@
 //!
 //! Generate MIDI files and WAV audio from note specifications or mood presets.
 
-#[cfg(feature = "server")]
-mod server;
-
 use chrono::{DateTime, Utc};
 use clap::{Parser, Subcommand};
 use midi_cli_rs::{
     JsonSequenceInput, Key, Mood, Note, NoteSequence, PresetConfig, generate_mood,
     resolve_instrument, write_midi,
 };
+#[cfg(feature = "server")]
+use midi_cli_rs::{lookup_plugin_mood, PluginMoodInfo};
+#[cfg(feature = "server")]
+use midi_cli_rs::server;
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
@@ -352,20 +353,70 @@ fn run(command: Commands) -> Result<(), Box<dyn std::error::Error>> {
             soundfont,
             verbose,
         } => {
-            // Parse mood
-            let mood_enum = Mood::parse(&mood).ok_or_else(|| {
-                format!(
-                    "Unknown mood: {mood}. Built-in moods: suspense, eerie, upbeat, calm, ambient, jazz, show, orchestral. \
-                    Note: Plugin moods shown in 'moods' command are metadata only - audio generation not yet implemented."
-                )
-            })?;
+            // Try to parse as built-in mood first
+            let (mood_enum, plugin_overrides): (Mood, Option<PluginMoodInfo>) =
+                if let Some(m) = Mood::parse(&mood) {
+                    (m, None)
+                } else {
+                    // Check if it's a plugin mood with base_mood
+                    #[cfg(feature = "server")]
+                    {
+                        if let Some(plugin_mood) = lookup_plugin_mood(&mood) {
+                            if let Some(ref base) = plugin_mood.base_mood {
+                                if let Some(base_enum) = Mood::parse(base) {
+                                    (base_enum, Some(plugin_mood))
+                                } else {
+                                    return Err(format!(
+                                        "Plugin mood '{}' has invalid base_mood '{}'. Valid base moods: suspense, eerie, upbeat, calm, ambient, jazz, show, orchestral.",
+                                        mood, base
+                                    ).into());
+                                }
+                            } else {
+                                return Err(format!(
+                                    "Plugin mood '{}' has no base_mood defined - cannot generate audio. Add 'base_mood = \"upbeat\"' (or another built-in mood) to the plugin TOML.",
+                                    mood
+                                ).into());
+                            }
+                        } else {
+                            return Err(format!(
+                                "Unknown mood: {mood}. Built-in moods: suspense, eerie, upbeat, calm, ambient, jazz, show, orchestral, chiptune. \
+                                Use 'midi-cli-rs moods' to see available plugin moods."
+                            ).into());
+                        }
+                    }
+                    #[cfg(not(feature = "server"))]
+                    {
+                        return Err(format!(
+                            "Unknown mood: {mood}. Built-in moods: suspense, eerie, upbeat, calm, ambient, jazz, show, orchestral, chiptune."
+                        ).into());
+                    }
+                };
 
-            // Parse key (or use mood default)
+            // Parse key: use CLI arg > plugin default > mood default
             let key_enum = if let Some(k) = key {
                 Key::parse(&k)
                     .ok_or_else(|| format!("Unknown key: {k}. Examples: C, Am, F#m, Bb"))?
+            } else if let Some(ref plugin) = plugin_overrides {
+                Key::parse(&plugin.default_key).unwrap_or_else(|| mood_enum.default_key())
             } else {
                 mood_enum.default_key()
+            };
+
+            // Apply plugin tempo/intensity overrides if not specified on CLI
+            let final_tempo = if tempo != 90 {
+                tempo  // CLI override
+            } else if let Some(ref plugin) = plugin_overrides {
+                plugin.default_tempo
+            } else {
+                tempo
+            };
+
+            let final_intensity = if intensity != 50 {
+                intensity  // CLI override
+            } else if let Some(ref plugin) = plugin_overrides {
+                plugin.default_intensity.unwrap_or(intensity)
+            } else {
+                intensity
             };
 
             // Handle seed: 0 or negative = random, positive = use that value
@@ -382,9 +433,9 @@ fn run(command: Commands) -> Result<(), Box<dyn std::error::Error>> {
             let config = PresetConfig {
                 duration_secs: duration,
                 key: key_enum,
-                intensity: intensity.min(100),
+                intensity: final_intensity.min(100),
                 seed: actual_seed,
-                tempo,
+                tempo: final_tempo,
             };
 
             // Generate sequences
@@ -397,10 +448,14 @@ fn run(command: Commands) -> Result<(), Box<dyn std::error::Error>> {
             // Verbose output
             if verbose {
                 eprintln!("--- Preset Generation Details ---");
-                eprintln!("Mood: {:?}", mood_enum);
+                if plugin_overrides.is_some() {
+                    eprintln!("Plugin Mood: {} (base: {:?})", mood, mood_enum);
+                } else {
+                    eprintln!("Mood: {:?}", mood_enum);
+                }
                 eprintln!("Key: {:?} (root MIDI note: {})", key_enum, key_enum.root());
-                eprintln!("Duration: {:.1}s ({:.1} beats at {} BPM)", duration, duration * tempo as f64 / 60.0, tempo);
-                eprintln!("Intensity: {}/100", intensity);
+                eprintln!("Duration: {:.1}s ({:.1} beats at {} BPM)", duration, duration * final_tempo as f64 / 60.0, final_tempo);
+                eprintln!("Intensity: {}/100", final_intensity);
                 eprintln!("Seed: {}{}", actual_seed, if seed <= 0 { " (random)" } else { "" });
                 eprintln!("Layers: {}", sequences.len());
                 for (i, seq) in sequences.iter().enumerate() {
@@ -510,21 +565,25 @@ fn run(command: Commands) -> Result<(), Box<dyn std::error::Error>> {
                 "{:<12} {:<8} Full symphonic orchestra with all sections",
                 "orchestral", "C"
             );
+            println!(
+                "{:<12} {:<8} 8-bit video game style with square wave arpeggios",
+                "chiptune", "C"
+            );
 
             // Plugin moods
             let moods_dir = std::env::var("HOME")
                 .map(|h| std::path::PathBuf::from(h).join(".midi-cli-rs/moods"))
                 .unwrap_or_default();
 
-            if moods_dir.exists() {
-                if let Ok(entries) = std::fs::read_dir(&moods_dir) {
+            if moods_dir.exists()
+                && let Ok(entries) = std::fs::read_dir(&moods_dir) {
                     let mut plugin_moods: Vec<(String, String, String, String)> = Vec::new();
 
                     for entry in entries.flatten() {
                         let path = entry.path();
-                        if path.extension().map(|e| e == "toml").unwrap_or(false) {
-                            if let Ok(content) = std::fs::read_to_string(&path) {
-                                if let Ok(pack) = content.parse::<toml::Table>() {
+                        if path.extension().map(|e| e == "toml").unwrap_or(false)
+                            && let Ok(content) = std::fs::read_to_string(&path)
+                                && let Ok(pack) = content.parse::<toml::Table>() {
                                     let pack_name = pack.get("pack")
                                         .and_then(|p| p.get("name"))
                                         .and_then(|n| n.as_str())
@@ -546,8 +605,6 @@ fn run(command: Commands) -> Result<(), Box<dyn std::error::Error>> {
                                         }
                                     }
                                 }
-                            }
-                        }
                     }
 
                     if !plugin_moods.is_empty() {
@@ -561,7 +618,6 @@ fn run(command: Commands) -> Result<(), Box<dyn std::error::Error>> {
                         }
                     }
                 }
-            }
 
             println!("\nUsage: midi-cli-rs preset --mood suspense --duration 5 -o out.wav");
             println!("       midi-cli-rs preset -m jazz -d 10 --key Bb --seed 42 -o nightclub.wav");
@@ -601,13 +657,11 @@ quit""#,
                     let stdout = String::from_utf8_lossy(&output.stdout);
                     for line in stdout.lines() {
                         // Parse lines like "000-000 Stereo Grand"
-                        if line.starts_with(|c: char| c.is_ascii_digit()) {
-                            if let Some((bank_prog, name)) = line.split_once(' ') {
-                                if let Some((bank, prog)) = bank_prog.split_once('-') {
+                        if line.starts_with(|c: char| c.is_ascii_digit())
+                            && let Some((bank_prog, name)) = line.split_once(' ')
+                                && let Some((bank, prog)) = bank_prog.split_once('-') {
                                     println!("{:<8} {:<8} {}", bank, prog, name);
                                 }
-                            }
-                        }
                     }
                     println!("\nUse program number with -i/--instrument option.");
                 }
@@ -640,14 +694,13 @@ quit""#,
         Commands::Serve { port, static_dir, data_dir } => {
             // Resolve static directory: explicit > exe-relative > cwd
             let static_path = static_dir.unwrap_or_else(|| {
-                if let Ok(exe) = std::env::current_exe() {
-                    if let Some(exe_dir) = exe.parent() {
+                if let Ok(exe) = std::env::current_exe()
+                    && let Some(exe_dir) = exe.parent() {
                         let exe_static = exe_dir.join("static");
                         if exe_static.exists() {
                             return exe_static;
                         }
                     }
-                }
                 PathBuf::from("static")
             });
 

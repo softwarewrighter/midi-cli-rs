@@ -1,5 +1,6 @@
 //! REST API handlers for the web server.
 
+use crate::midi::sequence::INSTRUMENT_MAP;
 use crate::server::state::{
     AppState, ErrorResponse, GenerateResponse, MelodyRequest, PresetRequest, SavedMelody,
     SavedPreset,
@@ -248,13 +249,13 @@ pub async fn list_moods() -> impl IntoResponse {
 
     // Add moods from installed plugins
     let moods_dir = get_moods_dir();
-    if moods_dir.exists() {
-        if let Ok(entries) = std::fs::read_dir(&moods_dir) {
+    if moods_dir.exists()
+        && let Ok(entries) = std::fs::read_dir(&moods_dir) {
             for entry in entries.flatten() {
                 let path = entry.path();
-                if path.extension().map(|e| e == "toml").unwrap_or(false) {
-                    if let Ok(content) = std::fs::read_to_string(&path) {
-                        if let Ok(pack) = content.parse::<toml::Table>() {
+                if path.extension().map(|e| e == "toml").unwrap_or(false)
+                    && let Ok(content) = std::fs::read_to_string(&path)
+                        && let Ok(pack) = content.parse::<toml::Table>() {
                             let pack_name = pack.get("pack")
                                 .and_then(|p| p.get("name"))
                                 .and_then(|n| n.as_str())
@@ -276,11 +277,8 @@ pub async fn list_moods() -> impl IntoResponse {
                                 }
                             }
                         }
-                    }
-                }
             }
         }
-    }
 
     Json(moods)
 }
@@ -296,7 +294,7 @@ struct MoodInfo {
 /// Check if a mood name is valid.
 /// Built-in moods
 const BUILTIN_MOODS: &[&str] = &[
-    "suspense", "eerie", "upbeat", "calm", "ambient", "jazz", "show", "orchestral",
+    "suspense", "eerie", "upbeat", "calm", "ambient", "jazz", "show", "orchestral", "chiptune",
 ];
 
 fn is_valid_mood(mood: &str) -> bool {
@@ -306,11 +304,10 @@ fn is_valid_mood(mood: &str) -> bool {
         return true;
     }
     // Check plugin moods
-    if let Some(plugin_moods) = get_plugin_moods() {
-        if plugin_moods.contains(&mood_lower) {
+    if let Some(plugin_moods) = get_plugin_moods()
+        && plugin_moods.contains(&mood_lower) {
             return true;
         }
-    }
     false
 }
 
@@ -325,19 +322,16 @@ fn get_plugin_moods() -> Option<Vec<String>> {
     if let Ok(entries) = std::fs::read_dir(&moods_dir) {
         for entry in entries.flatten() {
             let path = entry.path();
-            if path.extension().map(|e| e == "toml").unwrap_or(false) {
-                if let Ok(content) = std::fs::read_to_string(&path) {
-                    if let Ok(pack) = content.parse::<toml::Table>() {
-                        if let Some(pack_moods) = pack.get("moods").and_then(|m| m.as_array()) {
+            if path.extension().map(|e| e == "toml").unwrap_or(false)
+                && let Ok(content) = std::fs::read_to_string(&path)
+                    && let Ok(pack) = content.parse::<toml::Table>()
+                        && let Some(pack_moods) = pack.get("moods").and_then(|m| m.as_array()) {
                             for mood in pack_moods {
                                 if let Some(name) = mood.get("name").and_then(|n| n.as_str()) {
                                     moods.push(name.to_lowercase());
                                 }
                             }
                         }
-                    }
-                }
-            }
         }
     }
     if moods.is_empty() { None } else { Some(moods) }
@@ -571,7 +565,7 @@ pub async fn generate_melody_audio(
 
 /// GET /api/instruments - List available instruments.
 pub async fn list_instruments() -> impl IntoResponse {
-    Json(midi_cli_rs::INSTRUMENT_MAP
+    Json(INSTRUMENT_MAP
         .iter()
         .map(|(name, num)| InstrumentInfo { name, program: *num })
         .collect::<Vec<_>>())
@@ -600,11 +594,10 @@ pub async fn list_plugins() -> impl IntoResponse {
     if let Ok(entries) = std::fs::read_dir(&moods_dir) {
         for entry in entries.flatten() {
             let path = entry.path();
-            if path.extension().is_some_and(|e| e == "toml") {
-                if let Some(info) = parse_mood_pack_info(&path) {
+            if path.extension().is_some_and(|e| e == "toml")
+                && let Some(info) = parse_mood_pack_info(&path) {
                     plugins.push(info);
                 }
-            }
         }
     }
 
@@ -725,7 +718,7 @@ pub async fn delete_plugin(
 }
 
 /// Get the moods plugin directory path.
-fn get_moods_dir() -> std::path::PathBuf {
+pub fn get_moods_dir() -> std::path::PathBuf {
     if let Some(home) = std::env::var_os("HOME") {
         std::path::PathBuf::from(home).join(".midi-cli-rs").join("moods")
     } else {
@@ -734,7 +727,7 @@ fn get_moods_dir() -> std::path::PathBuf {
 }
 
 /// Parse a mood pack TOML file and extract info.
-fn parse_mood_pack_info(path: &std::path::Path) -> Option<MoodPackInfo> {
+pub fn parse_mood_pack_info(path: &std::path::Path) -> Option<MoodPackInfo> {
     let content = std::fs::read_to_string(path).ok()?;
     let pack: toml::Value = toml::from_str(&content).ok()?;
 
@@ -768,14 +761,24 @@ fn parse_mood_pack_info(path: &std::path::Path) -> Option<MoodPackInfo> {
                 .get("default_tempo")
                 .and_then(|t| t.as_integer())
                 .unwrap_or(120) as u16;
+            let default_intensity = m
+                .get("default_intensity")
+                .and_then(|i| i.as_integer())
+                .map(|i| i as u8);
+            let base_mood = m
+                .get("base_mood")
+                .and_then(|b| b.as_str())
+                .map(|s| s.to_string());
             let description = m
                 .get("description")
                 .and_then(|d| d.as_str())
                 .map(|s| s.to_string());
             Some(PluginMoodInfo {
                 name,
+                base_mood,
                 default_key,
                 default_tempo,
+                default_intensity,
                 description,
             })
         })
@@ -803,11 +806,13 @@ pub struct MoodPackInfo {
     pub file_path: Option<String>,
 }
 
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
 pub struct PluginMoodInfo {
     pub name: String,
+    pub base_mood: Option<String>,
     pub default_key: String,
     pub default_tempo: u16,
+    pub default_intensity: Option<u8>,
     pub description: Option<String>,
 }
 
@@ -816,4 +821,27 @@ pub struct UploadPluginRequest {
     pub content: String,
     #[serde(default)]
     pub filename: Option<String>,
+}
+
+/// Look up a plugin mood by name across all loaded mood packs.
+/// Returns the mood info if found.
+pub fn lookup_plugin_mood(mood_name: &str) -> Option<PluginMoodInfo> {
+    let moods_dir = get_moods_dir();
+    if !moods_dir.exists() {
+        return None;
+    }
+
+    let entries = std::fs::read_dir(&moods_dir).ok()?;
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.extension().is_some_and(|e| e == "toml")
+            && let Some(pack) = parse_mood_pack_info(&path) {
+                for mood in pack.moods {
+                    if mood.name == mood_name {
+                        return Some(mood);
+                    }
+                }
+            }
+    }
+    None
 }

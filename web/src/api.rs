@@ -156,8 +156,10 @@ pub struct MoodPackInfo {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct PluginMoodInfo {
     pub name: String,
+    pub base_mood: Option<String>,
     pub default_key: String,
     pub default_tempo: u16,
+    pub default_intensity: Option<u8>,
     pub description: Option<String>,
 }
 

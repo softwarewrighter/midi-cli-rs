@@ -8,7 +8,7 @@
 //! - Harp for color
 
 use crate::midi::{Note, NoteSequence};
-use crate::preset::{Key, MoodGenerator, PresetConfig, PresetVariation, create_rng};
+use crate::preset::{MoodGenerator, PresetConfig, PresetVariation, create_rng};
 use rand::Rng;
 
 /// GM program numbers for orchestral instruments
@@ -385,6 +385,7 @@ fn generate_timpani(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::preset::Key;
 
     #[test]
     fn test_orchestral_generates_sequences() {

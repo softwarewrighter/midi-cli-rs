@@ -5,6 +5,7 @@
 
 mod ambient;
 mod calm;
+mod chiptune;
 mod eerie;
 mod jazz;
 mod orchestral;
@@ -14,6 +15,7 @@ mod upbeat;
 
 pub use ambient::AmbientPreset;
 pub use calm::CalmPreset;
+pub use chiptune::ChiptunePreset;
 pub use eerie::EeriePreset;
 pub use jazz::JazzPreset;
 pub use orchestral::OrchestralPreset;
@@ -59,46 +61,115 @@ pub struct PresetVariation {
 }
 
 impl PresetVariation {
+    /// Mix seed with a salt to get independent derived values
+    /// Uses FNV-1a style mixing for good distribution
+    fn mix(seed: u64, salt: u64) -> u64 {
+        let mut hash = seed ^ salt;
+        hash = hash.wrapping_mul(0x517cc1b727220a95); // FNV prime
+        hash ^= hash >> 33;
+        hash = hash.wrapping_mul(0x4cf5ad432745937f);
+        hash ^= hash >> 29;
+        hash
+    }
+
+    /// Generate a float in [0, 1) from mixed seed
+    fn mix_float(seed: u64, salt: u64) -> f64 {
+        (Self::mix(seed, salt) as f64) / (u64::MAX as f64)
+    }
+
     /// Generate variation parameters from seed
+    /// Each parameter is derived independently using different salts,
+    /// so changing the seed affects all aspects independently
     pub fn from_seed(seed: u64) -> Self {
-        let mut rng = StdRng::seed_from_u64(seed);
+        // Each aspect uses a unique salt for independent variation
+        // Salts are arbitrary primes to minimize correlation
+        const TEMPO_SALT: u64 = 0x9e3779b97f4a7c15;
+        const LAYER_SALT: u64 = 0x6a09e667f3bcc908;
+        const INST_SALT: u64 = 0xbb67ae8584caa73b;
+        const STYLE_SALT: u64 = 0x3c6ef372fe94f82b;
+        const DENSITY_SALT: u64 = 0xa54ff53a5f1d36f1;
+        const VELOCITY_SALT: u64 = 0x510e527fade682d1;
+        const CONTOUR_SALT: u64 = 0x9b05688c2b3e6c1f;
+        const REST_SALT: u64 = 0x1f83d9abfb41bd6b;
+        const PHRASE_SALT: u64 = 0x5be0cd19137e2179;
+        const SCALE_SALT: u64 = 0x428a2f98d728ae22;
+        const INTERVAL_SALT: u64 = 0x7137449123ef65cd;
+
+        // Tempo: ±15% variation
+        let tempo_raw = Self::mix_float(seed, TEMPO_SALT);
+        let tempo_factor = 0.85 + tempo_raw * 0.30; // 0.85 to 1.15
+
+        // Layer inclusion probabilities - each layer uses a different sub-salt
+        let layer_probs = [
+            0.3 + Self::mix_float(seed, LAYER_SALT) * 0.7,
+            0.3 + Self::mix_float(seed, LAYER_SALT.wrapping_add(1)) * 0.7,
+            0.2 + Self::mix_float(seed, LAYER_SALT.wrapping_add(2)) * 0.7,
+            0.2 + Self::mix_float(seed, LAYER_SALT.wrapping_add(3)) * 0.6,
+            0.1 + Self::mix_float(seed, LAYER_SALT.wrapping_add(4)) * 0.6,
+            0.1 + Self::mix_float(seed, LAYER_SALT.wrapping_add(5)) * 0.5,
+        ];
+
+        // Instrument indices
+        let instrument_indices = [
+            Self::mix(seed, INST_SALT) as u8,
+            Self::mix(seed, INST_SALT.wrapping_add(1)) as u8,
+            Self::mix(seed, INST_SALT.wrapping_add(2)) as u8,
+            Self::mix(seed, INST_SALT.wrapping_add(3)) as u8,
+            Self::mix(seed, INST_SALT.wrapping_add(4)) as u8,
+            Self::mix(seed, INST_SALT.wrapping_add(5)) as u8,
+        ];
+
+        // Style choices
+        let style_choices = [
+            Self::mix(seed, STYLE_SALT) as u8,
+            Self::mix(seed, STYLE_SALT.wrapping_add(1)) as u8,
+            Self::mix(seed, STYLE_SALT.wrapping_add(2)) as u8,
+            Self::mix(seed, STYLE_SALT.wrapping_add(3)) as u8,
+            Self::mix(seed, STYLE_SALT.wrapping_add(4)) as u8,
+            Self::mix(seed, STYLE_SALT.wrapping_add(5)) as u8,
+        ];
+
+        // Density: 0.6 to 1.4
+        let density_factor = 0.6 + Self::mix_float(seed, DENSITY_SALT) * 0.8;
+
+        // Velocity offset: -15 to +15
+        let velocity_offset = ((Self::mix(seed, VELOCITY_SALT) % 31) as i8) - 15;
+
+        // Note count factor: 0.7 to 1.4
+        let note_count_factor = 0.7 + Self::mix_float(seed, DENSITY_SALT.wrapping_add(100)) * 0.7;
+
+        // Melodic contour: 0-15 (16 patterns)
+        let contour_pattern = (Self::mix(seed, CONTOUR_SALT) % 16) as u8;
+
+        // Rest probability: 0.0 to 0.35
+        let rest_probability = Self::mix_float(seed, REST_SALT) * 0.35;
+
+        // Phrase length: 3-8
+        let phrase_length = 3 + (Self::mix(seed, PHRASE_SALT) % 6) as u8;
+
+        // Phrase transform: 0-4
+        let phrase_transform = (Self::mix(seed, PHRASE_SALT.wrapping_add(1)) % 5) as u8;
+
+        // Scale offset: 0-6
+        let scale_offset = (Self::mix(seed, SCALE_SALT) % 7) as u8;
+
+        // Interval style: 0-3
+        let interval_style = (Self::mix(seed, INTERVAL_SALT) % 4) as u8;
 
         Self {
-            tempo_factor: 1.0 + (rng.gen_range(-15..=15) as f64 / 100.0),
-            layer_probs: [
-                rng.gen_range(0.3..1.0),
-                rng.gen_range(0.3..1.0),
-                rng.gen_range(0.2..0.9),
-                rng.gen_range(0.2..0.8),
-                rng.gen_range(0.1..0.7),
-                rng.gen_range(0.1..0.6),
-            ],
-            instrument_indices: [
-                rng.gen_range(0..=255),
-                rng.gen_range(0..=255),
-                rng.gen_range(0..=255),
-                rng.gen_range(0..=255),
-                rng.gen_range(0..=255),
-                rng.gen_range(0..=255),
-            ],
-            style_choices: [
-                rng.gen_range(0..=255),
-                rng.gen_range(0..=255),
-                rng.gen_range(0..=255),
-                rng.gen_range(0..=255),
-                rng.gen_range(0..=255),
-                rng.gen_range(0..=255),
-            ],
-            density_factor: rng.gen_range(0.6..1.4),
-            velocity_offset: rng.gen_range(-15..=15),
-            note_count_factor: rng.gen_range(0.7..1.4),
-            // Melodic variation parameters
-            contour_pattern: rng.gen_range(0..=15), // 16 different contour patterns
-            rest_probability: rng.gen_range(0.0..0.35),
-            phrase_length: rng.gen_range(3..=8),
-            phrase_transform: rng.gen_range(0..=4),
-            scale_offset: rng.gen_range(0..=6),
-            interval_style: rng.gen_range(0..=3),
+            tempo_factor,
+            layer_probs,
+            instrument_indices,
+            style_choices,
+            density_factor,
+            velocity_offset,
+            note_count_factor,
+            contour_pattern,
+            rest_probability,
+            phrase_length,
+            phrase_transform,
+            scale_offset,
+            interval_style,
         }
     }
 
@@ -293,6 +364,7 @@ pub enum Mood {
     Jazz,
     Show,
     Orchestral,
+    Chiptune,
 }
 
 impl Mood {
@@ -307,6 +379,7 @@ impl Mood {
             "jazz" | "jazzy" | "swing" => Some(Mood::Jazz),
             "show" | "broadway" | "musical" | "theater" | "theatrical" => Some(Mood::Show),
             "orchestral" | "orchestra" | "symphonic" | "symphony" | "classical" => Some(Mood::Orchestral),
+            "chiptune" | "chip" | "gameboy" | "nes" => Some(Mood::Chiptune),
             _ => None,
         }
     }
@@ -322,6 +395,7 @@ impl Mood {
             Mood::Jazz => Key::F,        // Common jazz key
             Mood::Show => Key::Bb,       // Broadway standard key
             Mood::Orchestral => Key::C,  // Classical orchestral key
+            Mood::Chiptune => Key::C,    // Classic game music key
         }
     }
 }
@@ -376,6 +450,7 @@ pub fn generate_mood(mood: Mood, config: &PresetConfig) -> Vec<NoteSequence> {
         Mood::Jazz => JazzPreset.generate(config),
         Mood::Show => ShowPreset.generate(config),
         Mood::Orchestral => OrchestralPreset.generate(config),
+        Mood::Chiptune => ChiptunePreset.generate(config),
     }
 }
 
@@ -437,6 +512,7 @@ mod tests {
             Mood::Jazz,
             Mood::Show,
             Mood::Orchestral,
+            Mood::Chiptune,
         ] {
             let sequences = generate_mood(mood, &config);
             assert!(
@@ -507,7 +583,7 @@ mod tests {
     fn test_effective_tempo_clamped() {
         let var = PresetVariation::from_seed(999);
         let tempo = var.effective_tempo(100);
-        assert!(tempo >= 40 && tempo <= 200);
+        assert!((40..=200).contains(&tempo));
     }
 
     #[test]
