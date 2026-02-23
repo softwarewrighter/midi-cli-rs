@@ -48,7 +48,10 @@ pub async fn run_server(
                 .delete(api::delete_melody),
         )
         .route("/melodies/:id/generate", post(api::generate_melody_audio))
-        .route("/instruments", get(api::list_instruments));
+        .route("/instruments", get(api::list_instruments))
+        // Plugin routes
+        .route("/plugins", get(api::list_plugins).post(api::upload_plugin))
+        .route("/plugins/:name", axum::routing::delete(api::delete_plugin));
 
     // CORS configuration for development
     let cors = CorsLayer::new()

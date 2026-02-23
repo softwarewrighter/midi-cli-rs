@@ -131,6 +131,35 @@ struct ErrorResponse {
 }
 
 // ============================================================================
+// Plugin/MoodPack types
+// ============================================================================
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct MoodPackInfo {
+    pub name: String,
+    pub version: String,
+    pub author: Option<String>,
+    pub description: Option<String>,
+    pub mood_count: usize,
+    pub moods: Vec<PluginMoodInfo>,
+    pub file_path: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct PluginMoodInfo {
+    pub name: String,
+    pub default_key: String,
+    pub default_tempo: u16,
+    pub description: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct UploadPluginRequest {
+    pub content: String,
+    pub filename: Option<String>,
+}
+
+// ============================================================================
 // API Client
 // ============================================================================
 
@@ -298,6 +327,53 @@ impl ApiClient {
             response.json().await.map_err(|e| e.to_string())
         } else {
             Err(format!("Failed to fetch instruments: {}", response.status()))
+        }
+    }
+
+    // Plugin endpoints
+    pub async fn list_plugins() -> Result<Vec<MoodPackInfo>, String> {
+        let response = Request::get(&format!("{}/plugins", API_BASE))
+            .send()
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if response.ok() {
+            response.json().await.map_err(|e| e.to_string())
+        } else {
+            Err(format!("Failed to fetch plugins: {}", response.status()))
+        }
+    }
+
+    pub async fn upload_plugin(content: &str) -> Result<MoodPackInfo, String> {
+        let req = UploadPluginRequest {
+            content: content.to_string(),
+            filename: None,
+        };
+
+        let response = Request::post(&format!("{}/plugins", API_BASE))
+            .json(&req)
+            .map_err(|e| e.to_string())?
+            .send()
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if response.ok() {
+            response.json().await.map_err(|e| e.to_string())
+        } else {
+            Err(Self::extract_error(response, "Failed to upload plugin").await)
+        }
+    }
+
+    pub async fn delete_plugin(name: &str) -> Result<(), String> {
+        let response = Request::delete(&format!("{}/plugins/{}", API_BASE, name))
+            .send()
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if response.ok() || response.status() == 204 {
+            Ok(())
+        } else {
+            Err(Self::extract_error(response, "Failed to delete plugin").await)
         }
     }
 }

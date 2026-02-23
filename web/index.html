@@ -595,6 +595,191 @@
             border-color: var(--highlight);
             opacity: 1;
         }
+
+        /* Plugin Manager Styles */
+        .plugins-layout {
+            display: block;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .plugin-manager .card {
+            margin-bottom: 1.5rem;
+        }
+
+        .plugin-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .upload-btn {
+            cursor: pointer;
+        }
+
+        .plugin-info {
+            margin-bottom: 1rem;
+        }
+
+        .plugin-info code {
+            background: var(--accent);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+
+        .text-muted {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .plugin-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .plugin-item {
+            background: var(--accent);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        .plugin-header {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            cursor: pointer;
+            gap: 1rem;
+        }
+
+        .plugin-header:hover {
+            background: var(--border);
+        }
+
+        .plugin-title {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .plugin-name {
+            font-weight: 600;
+        }
+
+        .plugin-version {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+
+        .plugin-mood-count {
+            background: var(--highlight);
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+        }
+
+        .expand-icon {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+
+        .plugin-details {
+            padding: 0 1rem 1rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .plugin-description {
+            margin: 1rem 0;
+        }
+
+        .plugin-author {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        .plugin-moods h4 {
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .plugin-moods ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .plugin-moods li {
+            padding: 0.5rem;
+            background: var(--card-bg);
+            border-radius: 4px;
+            margin-bottom: 0.25rem;
+            font-size: 0.9rem;
+        }
+
+        .plugin-moods code {
+            color: var(--highlight);
+        }
+
+        .mood-key {
+            background: var(--border);
+            padding: 0.1rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            margin-left: 0.5rem;
+        }
+
+        .mood-desc {
+            color: var(--text-muted);
+        }
+
+        .plugin-details .plugin-actions {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+
+        /* Built-in moods */
+        .builtin-moods {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .builtin-mood-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: var(--accent);
+            border-radius: 6px;
+        }
+
+        .builtin-mood-item .mood-name {
+            color: var(--highlight);
+            font-weight: 500;
+            min-width: 80px;
+        }
+
+        .builtin-mood-item .mood-key {
+            min-width: 30px;
+            text-align: center;
+        }
+
+        .builtin-mood-item .mood-description {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .loading-spinner {
+            display: flex;
+            justify-content: center;
+            padding: 2rem;
+        }
     </style>
 </head>
 <body>

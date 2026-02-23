@@ -7,8 +7,8 @@ mod version_info {
     include!(concat!(env!("OUT_DIR"), "/version_info.rs"));
 }
 
-use api::{ApiClient, MelodyRequest, PresetRequest, SavedMelody, SavedPreset};
-use components::{MelodyEditor, MelodyList, PresetEditor, PresetList};
+use api::{ApiClient, MelodyRequest, MoodPackInfo, PresetRequest, SavedMelody, SavedPreset};
+use components::{MelodyEditor, MelodyList, PluginManager, PresetEditor, PresetList};
 use std::collections::HashMap;
 use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
@@ -17,6 +17,7 @@ use yew::prelude::*;
 enum Tab {
     Presets,
     Melodies,
+    Plugins,
 }
 
 #[derive(Default)]
@@ -32,6 +33,9 @@ struct AppState {
     editing_melody: Option<SavedMelody>,
     generating_melody: Option<String>,
     melody_audio_urls: HashMap<String, String>,
+    // Plugins
+    plugins: Vec<MoodPackInfo>,
+    plugins_loading: bool,
     // Common
     error: Option<String>,
     loading: bool,
@@ -72,6 +76,13 @@ enum Msg {
     MelodyDeleted(String),
     GenerateMelodyAudio(String),
     MelodyGenerationComplete(String, String),
+    // Plugins
+    LoadPlugins,
+    PluginsLoaded(Vec<MoodPackInfo>),
+    UploadPlugin(String),
+    PluginUploaded(MoodPackInfo),
+    DeletePlugin(String),
+    PluginDeleted(String),
     // Common
     Error(String),
     ClearError,
@@ -88,6 +99,7 @@ impl Component for App {
     fn create(ctx: &Context<Self>) -> Self {
         ctx.link().send_message(Msg::LoadPresets);
         ctx.link().send_message(Msg::LoadMelodies);
+        ctx.link().send_message(Msg::LoadPlugins);
         Self {
             state: AppState::new(),
         }
@@ -279,6 +291,56 @@ impl Component for App {
                 true
             }
 
+            // Plugin handlers
+            Msg::LoadPlugins => {
+                self.state.plugins_loading = true;
+                let link = ctx.link().clone();
+                spawn_local(async move {
+                    match ApiClient::list_plugins().await {
+                        Ok(plugins) => link.send_message(Msg::PluginsLoaded(plugins)),
+                        Err(e) => {
+                            link.send_message(Msg::PluginsLoaded(vec![]));
+                            link.send_message(Msg::Error(e));
+                        }
+                    }
+                });
+                true
+            }
+            Msg::PluginsLoaded(plugins) => {
+                self.state.plugins = plugins;
+                self.state.plugins_loading = false;
+                true
+            }
+            Msg::UploadPlugin(content) => {
+                let link = ctx.link().clone();
+                spawn_local(async move {
+                    match ApiClient::upload_plugin(&content).await {
+                        Ok(plugin) => link.send_message(Msg::PluginUploaded(plugin)),
+                        Err(e) => link.send_message(Msg::Error(e)),
+                    }
+                });
+                true
+            }
+            Msg::PluginUploaded(_plugin) => {
+                ctx.link().send_message(Msg::LoadPlugins);
+                true
+            }
+            Msg::DeletePlugin(name) => {
+                let link = ctx.link().clone();
+                let name_clone = name.clone();
+                spawn_local(async move {
+                    match ApiClient::delete_plugin(&name_clone).await {
+                        Ok(()) => link.send_message(Msg::PluginDeleted(name_clone)),
+                        Err(e) => link.send_message(Msg::Error(e)),
+                    }
+                });
+                true
+            }
+            Msg::PluginDeleted(name) => {
+                self.state.plugins.retain(|p| p.name != name);
+                true
+            }
+
             // Common handlers
             Msg::Error(error) => {
                 self.state.error = Some(error);
@@ -298,6 +360,7 @@ impl Component for App {
 
         let on_tab_presets = ctx.link().callback(|_| Msg::SwitchTab(Tab::Presets));
         let on_tab_melodies = ctx.link().callback(|_| Msg::SwitchTab(Tab::Melodies));
+        let on_tab_plugins = ctx.link().callback(|_| Msg::SwitchTab(Tab::Plugins));
 
         html! {
             <>
@@ -329,6 +392,12 @@ impl Component for App {
                         >
                             {"Melodies"}
                         </button>
+                        <button
+                            class={if active_tab == Tab::Plugins { "tab active" } else { "tab" }}
+                            onclick={on_tab_plugins}
+                        >
+                            {"Plugins"}
+                        </button>
                     </div>
 
                     { if let Some(ref error) = self.state.error {
@@ -345,6 +414,7 @@ impl Component for App {
                     { match active_tab {
                         Tab::Presets => self.view_presets_tab(ctx),
                         Tab::Melodies => self.view_melodies_tab(ctx),
+                        Tab::Plugins => self.view_plugins_tab(ctx),
                     }}
                 </div>
 
@@ -421,6 +491,24 @@ impl App {
                     on_generate={on_generate}
                     generating={self.state.generating_melody.clone()}
                     audio_urls={self.state.melody_audio_urls.clone()}
+                />
+            </main>
+        }
+    }
+
+    fn view_plugins_tab(&self, ctx: &Context<Self>) -> Html {
+        let on_refresh = ctx.link().callback(|_| Msg::LoadPlugins);
+        let on_delete = ctx.link().callback(Msg::DeletePlugin);
+        let on_upload = ctx.link().callback(Msg::UploadPlugin);
+
+        html! {
+            <main class="main-content plugins-layout">
+                <PluginManager
+                    plugins={self.state.plugins.clone()}
+                    on_refresh={on_refresh}
+                    on_delete={on_delete}
+                    on_upload={on_upload}
+                    loading={self.state.plugins_loading}
                 />
             </main>
         }
