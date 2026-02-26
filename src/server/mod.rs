@@ -41,6 +41,8 @@ pub async fn run_server(
         .route("/moods", get(api::list_moods))
         // Melody routes
         .route("/melodies", get(api::list_melodies).post(api::create_melody))
+        // Specific routes before parameterized routes
+        .route("/melodies/import/abc", post(api::import_abc_melody))
         .route(
             "/melodies/:id",
             get(api::get_melody)
@@ -48,6 +50,7 @@ pub async fn run_server(
                 .delete(api::delete_melody),
         )
         .route("/melodies/:id/generate", post(api::generate_melody_audio))
+        .route("/melodies/:id/export/abc", get(api::export_melody_abc))
         .route("/instruments", get(api::list_instruments))
         // Plugin routes
         .route("/plugins", get(api::list_plugins).post(api::upload_plugin))

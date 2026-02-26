@@ -170,6 +170,18 @@ pub struct UploadPluginRequest {
 }
 
 // ============================================================================
+// ABC Import/Export types
+// ============================================================================
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct AbcImportRequest {
+    pub abc_content: String,
+    pub name: Option<String>,
+    pub instrument: Option<String>,
+    pub tempo: Option<u16>,
+}
+
+// ============================================================================
 // API Client
 // ============================================================================
 
@@ -397,6 +409,35 @@ impl ApiClient {
             Ok(())
         } else {
             Err(Self::extract_error(response, "Failed to delete plugin").await)
+        }
+    }
+
+    // ABC Import/Export endpoints
+    pub async fn import_abc_melody(req: &AbcImportRequest) -> Result<SavedMelody, String> {
+        let response = Request::post(&format!("{}/melodies/import/abc", API_BASE))
+            .json(req)
+            .map_err(|e| e.to_string())?
+            .send()
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if response.ok() {
+            response.json().await.map_err(|e| e.to_string())
+        } else {
+            Err(Self::extract_error(response, "Failed to import ABC").await)
+        }
+    }
+
+    pub async fn export_melody_abc(id: &str) -> Result<String, String> {
+        let response = Request::get(&format!("{}/melodies/{}/export/abc", API_BASE, id))
+            .send()
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if response.ok() {
+            response.text().await.map_err(|e| e.to_string())
+        } else {
+            Err(Self::extract_error(response, "Failed to export ABC").await)
         }
     }
 }

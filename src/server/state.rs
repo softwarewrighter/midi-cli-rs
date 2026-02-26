@@ -224,3 +224,16 @@ pub struct GenerateResponse {
 pub struct ErrorResponse {
     pub error: String,
 }
+
+/// Request body for importing ABC notation as a melody.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct AbcImportRequest {
+    /// The ABC notation content to import
+    pub abc_content: String,
+    /// Optional name for the melody (uses T: field if omitted)
+    pub name: Option<String>,
+    /// Optional instrument (defaults to "piano")
+    pub instrument: Option<String>,
+    /// Optional tempo override (uses Q: field or 120 if omitted)
+    pub tempo: Option<u16>,
+}

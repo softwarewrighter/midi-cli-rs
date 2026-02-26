@@ -1,5 +1,6 @@
 mod components;
 
+use components::abc_example_card::AbcExampleCard;
 use components::example_card::ExampleCard;
 use yew::prelude::*;
 
@@ -17,6 +18,7 @@ enum Tab {
     Electronic,
     Euclidean,
     Melodies,
+    AbcImport,
 }
 
 impl Tab {
@@ -34,6 +36,7 @@ impl Tab {
             Tab::Electronic => "Electronic",
             Tab::Euclidean => "Euclidean",
             Tab::Melodies => "Melodies",
+            Tab::AbcImport => "ABC Import",
         }
     }
 
@@ -51,6 +54,7 @@ impl Tab {
             Tab::Electronic,
             Tab::Euclidean,
             Tab::Melodies,
+            Tab::AbcImport,
         ]
     }
 }
@@ -472,6 +476,51 @@ fn render_tab_content(tab: Tab) -> Html {
                     command="midi-cli-rs generate --notes \"G2:4:75@0,B2:2:80@4,D3:2:85@6,G3:4:90@8,F#3:2:85@12,E3:2:80@14,D3:4:85@16,C3:2:80@20,B2:2:75@22,G2:6:80@24\" -i cello -t 54 -o output.wav"
                     audio_src="audio/melody-cello.wav"
                     params={vec![("Instrument", "cello"), ("Tempo", "54 BPM")]}
+                />
+            </>
+        },
+        Tab::AbcImport => html! {
+            <>
+                <p class="seed-note">{"Import melodies from ABC notation - a simple text format used by folk music archives:"}</p>
+                <AbcExampleCard
+                    title="Twinkle Twinkle Little Star"
+                    description="Classic nursery rhyme in C major."
+                    abc_source={"X:1\nT:Twinkle Twinkle Little Star\nM:4/4\nL:1/4\nQ:1/4=100\nK:C\nC C G G | A A G2 | F F E E | D D C2 |\nG G F F | E E D2 | G G F F | E E D2 |\nC C G G | A A G2 | F F E E | D D C2 |"}
+                    command="midi-cli-rs import abc pages/abc/twinkle.abc -o output.wav"
+                    audio_src="audio/abc-twinkle.wav"
+                    params={vec![("Key", "C"), ("Tempo", "100 BPM")]}
+                />
+                <AbcExampleCard
+                    title="Happy Birthday"
+                    description="The traditional birthday song in C major."
+                    abc_source={"X:1\nT:Happy Birthday\nM:3/4\nL:1/8\nQ:1/4=120\nK:C\nG2 G2 A2 | G2 c2 B4 | G2 G2 A2 | G2 d2 c4 |\nG2 G2 g2 | e2 c2 B2 A2 | f2 f2 e2 | c2 d2 c4 |"}
+                    command="midi-cli-rs import abc pages/abc/happy_birthday.abc -o output.wav"
+                    audio_src="audio/abc-happy-birthday.wav"
+                    params={vec![("Key", "C"), ("Tempo", "120 BPM")]}
+                />
+                <AbcExampleCard
+                    title="Jingle Bells"
+                    description="Classic holiday tune in G major."
+                    abc_source={"X:1\nT:Jingle Bells\nM:4/4\nL:1/4\nQ:1/4=140\nK:G\nD B A G | D2 D2 | D B A G | E4 |\nE c B A | F4 | d d c A | B4 |\nD B A G | D2 D2 | D B A G | E E E E |\nE c B A | d d d d | e d c A | G4 |"}
+                    command="midi-cli-rs import abc pages/abc/jingle_bells.abc -o output.wav"
+                    audio_src="audio/abc-jingle-bells.wav"
+                    params={vec![("Key", "G"), ("Tempo", "140 BPM")]}
+                />
+                <AbcExampleCard
+                    title="Ode to Joy"
+                    description="Beethoven's iconic theme from Symphony No. 9."
+                    abc_source={"X:1\nT:Ode to Joy\nC:Beethoven\nM:4/4\nL:1/4\nQ:1/4=120\nK:C\nE E F G | G F E D | C C D E | E3/2 D/ D2 |\nE E F G | G F E D | C C D E | D3/2 C/ C2 |\nD D E C | D E/2F/2 E C | D E/2F/2 E D | C D G,2 |\nE E F G | G F E D | C C D E | D3/2 C/ C2 |"}
+                    command="midi-cli-rs import abc pages/abc/ode_to_joy.abc -o output.wav"
+                    audio_src="audio/abc-ode-to-joy.wav"
+                    params={vec![("Key", "C"), ("Tempo", "120 BPM"), ("Composer", "Beethoven")]}
+                />
+                <AbcExampleCard
+                    title="Greensleeves"
+                    description="Traditional English folk song in A minor."
+                    abc_source={"X:1\nT:Greensleeves\nM:6/8\nL:1/8\nQ:3/8=60\nK:Am\nA2 | c3 d e/2f/2 | e3 d c | B3 G A/2B/2 | c3 A A |\nA3 ^G A | B3 ^G E | A3 d e/2f/2 | e3 d c |\nB3 G A/2B/2 | c B A ^G A | B ^G E2 | A4 ||"}
+                    command="midi-cli-rs import abc pages/abc/greensleeves.abc -o output.wav"
+                    audio_src="audio/abc-greensleeves.wav"
+                    params={vec![("Key", "Am"), ("Tempo", "60 BPM")]}
                 />
             </>
         },

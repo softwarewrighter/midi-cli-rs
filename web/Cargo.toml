@@ -20,9 +20,12 @@ wasm-bindgen-futures = "0.4"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 web-sys = { version = "0.3", features = [
+    "Clipboard",
     "Crypto",
     "HtmlAudioElement",
     "HtmlInputElement",
     "HtmlSelectElement",
+    "HtmlTextAreaElement",
+    "Navigator",
     "Window",
 ] }

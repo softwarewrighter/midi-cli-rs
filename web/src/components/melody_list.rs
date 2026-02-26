@@ -10,6 +10,7 @@ pub struct MelodyListProps {
     pub on_edit: Callback<SavedMelody>,
     pub on_delete: Callback<String>,
     pub on_generate: Callback<String>,
+    pub on_export_abc: Callback<String>,
     pub generating: Option<String>,
     pub audio_urls: std::collections::HashMap<String, String>,
 }
@@ -55,6 +56,12 @@ pub fn melody_list(props: &MelodyListProps) -> Html {
                         Callback::from(move |_| on_generate.emit(id.clone()))
                     };
 
+                    let on_export_abc = {
+                        let on_export_abc = props.on_export_abc.clone();
+                        let id = melody_id.clone();
+                        Callback::from(move |_| on_export_abc.emit(id.clone()))
+                    };
+
                     let note_preview: String = melody.notes
                         .iter()
                         .take(8)
@@ -90,6 +97,9 @@ pub fn melody_list(props: &MelodyListProps) -> Html {
                                 </button>
                                 <button class="btn-secondary btn-small" onclick={on_edit}>
                                     {"Edit"}
+                                </button>
+                                <button class="btn-secondary btn-small" onclick={on_export_abc} title="Export as ABC notation">
+                                    {"ABC"}
                                 </button>
                                 <button class="btn-danger btn-small" onclick={on_delete}>
                                     {"Delete"}

@@ -5,8 +5,8 @@
 use chrono::{DateTime, Utc};
 use clap::{Parser, Subcommand};
 use midi_cli_rs::{
-    JsonSequenceInput, Key, Mood, Note, NoteSequence, PresetConfig, generate_mood,
-    resolve_instrument, write_midi,
+    AbcParser, JsonSequenceInput, Key, Mood, MusicXmlParser, Note, NoteSequence, PresetConfig,
+    generate_mood, resolve_instrument, write_midi,
 };
 #[cfg(feature = "server")]
 use midi_cli_rs::{lookup_plugin_mood, PluginMoodInfo};
@@ -234,6 +234,81 @@ enum Commands {
         /// Defaults to ~/.midi-cli-rs
         #[arg(short, long)]
         data_dir: Option<PathBuf>,
+    },
+
+    /// Import melody from ABC notation or MusicXML file
+    #[command(subcommand, long_about = "Import melody from ABC notation or MusicXML file.\n\n\
+        EXAMPLES:\n  \
+        midi-cli-rs import abc tune.abc -o melody.wav\n  \
+        midi-cli-rs import abc tune.abc --instrument violin --tempo 100 -o tune.wav\n  \
+        midi-cli-rs import musicxml bach.mxl -o bach.wav\n\n\
+        SUPPORTED FORMATS:\n  \
+        - ABC notation (.abc) - Text-based format used by folk music archives\n  \
+        - MusicXML (.musicxml, .mxl) - Standard interchange format")]
+    Import(ImportFormat),
+}
+
+/// Import format subcommands
+#[derive(Subcommand)]
+enum ImportFormat {
+    /// Import from ABC notation file
+    Abc {
+        /// ABC notation file to import
+        file: PathBuf,
+
+        /// Output file path (.mid for MIDI only, .wav for audio)
+        #[arg(short, long)]
+        output: PathBuf,
+
+        /// Override key signature (e.g., C, Am, F#m, Bb)
+        #[arg(short, long)]
+        key: Option<String>,
+
+        /// Override tempo in BPM (uses file tempo if not specified)
+        #[arg(short, long)]
+        tempo: Option<u16>,
+
+        /// Instrument name or GM program number (default: piano)
+        #[arg(short, long, default_value = "piano")]
+        instrument: String,
+
+        /// SoundFont file for WAV rendering (auto-detected if not specified)
+        #[arg(long)]
+        soundfont: Option<PathBuf>,
+
+        /// Show detailed import info (title, key, notes, duration)
+        #[arg(short = 'v', long)]
+        verbose: bool,
+    },
+
+    /// Import from MusicXML file (.musicxml or compressed .mxl)
+    Musicxml {
+        /// MusicXML file to import
+        file: PathBuf,
+
+        /// Output file path (.mid for MIDI only, .wav for audio)
+        #[arg(short, long)]
+        output: PathBuf,
+
+        /// Override key signature (e.g., C, Am, F#m, Bb)
+        #[arg(short, long)]
+        key: Option<String>,
+
+        /// Override tempo in BPM (uses file tempo if not specified)
+        #[arg(short, long)]
+        tempo: Option<u16>,
+
+        /// Instrument name or GM program number (default: piano)
+        #[arg(short, long, default_value = "piano")]
+        instrument: String,
+
+        /// SoundFont file for WAV rendering (auto-detected if not specified)
+        #[arg(long)]
+        soundfont: Option<PathBuf>,
+
+        /// Show detailed import info (title, key, notes, duration)
+        #[arg(short = 'v', long)]
+        verbose: bool,
     },
 }
 
@@ -781,7 +856,114 @@ quit""#,
             rt.block_on(server::run_server(port, static_path, data_dir))?;
             Ok(())
         }
+
+        Commands::Import(format) => {
+            handle_import(format)
+        }
     }
+}
+
+/// Handle import command for ABC and MusicXML files
+fn handle_import(format: ImportFormat) -> Result<(), Box<dyn std::error::Error>> {
+    let (melody, file, output, key, tempo, instrument, soundfont, verbose) = match format {
+        ImportFormat::Abc {
+            file,
+            output,
+            key,
+            tempo,
+            instrument,
+            soundfont,
+            verbose,
+        } => {
+            let melody = AbcParser::parse_file(&file)?;
+            (melody, file, output, key, tempo, instrument, soundfont, verbose)
+        }
+        ImportFormat::Musicxml {
+            file,
+            output,
+            key,
+            tempo,
+            instrument,
+            soundfont,
+            verbose,
+        } => {
+            let melody = MusicXmlParser::parse_file(&file)?;
+            (melody, file, output, key, tempo, instrument, soundfont, verbose)
+        }
+    };
+
+    // Verbose output
+    if verbose {
+        eprintln!("--- Import Details ---");
+        eprintln!("File: {}", file.display());
+        if let Some(title) = &melody.title {
+            eprintln!("Title: {}", title);
+        }
+        if let Some(k) = &melody.key {
+            eprintln!("Key: {}", k);
+        }
+        if let Some(t) = melody.tempo {
+            eprintln!("Tempo: {} BPM", t);
+        }
+        eprintln!(
+            "Time Signature: {}/{}",
+            melody.time_signature.0, melody.time_signature.1
+        );
+        eprintln!("Notes: {}", melody.note_count());
+        eprintln!("Duration: {:.1} beats", melody.duration_beats());
+        eprintln!("----------------------");
+    }
+
+    // Convert to sequences
+    let sequences = melody.to_sequences(&instrument, tempo)?;
+
+    if sequences.is_empty() {
+        return Err("No notes to generate".into());
+    }
+
+    // Determine output format from extension
+    let ext = output.extension().and_then(|s| s.to_str()).unwrap_or("mid");
+
+    let midi_path = if ext == "wav" {
+        output.with_extension("mid")
+    } else {
+        output.clone()
+    };
+
+    // Write MIDI file
+    write_midi(&sequences, &midi_path)?;
+
+    let title_str = melody
+        .title
+        .as_ref()
+        .map(|t| format!(" \"{}\"", t))
+        .unwrap_or_default();
+    let key_str = key
+        .as_ref()
+        .or(melody.key.as_ref())
+        .map(|k| format!(", key: {}", k))
+        .unwrap_or_default();
+    let tempo_str = tempo
+        .or(melody.tempo)
+        .map(|t| format!(", tempo: {}", t))
+        .unwrap_or_default();
+
+    eprintln!(
+        "Imported{} ({} notes{}{}): {}",
+        title_str,
+        melody.note_count(),
+        key_str,
+        tempo_str,
+        midi_path.display()
+    );
+
+    // Render to WAV if requested
+    if ext == "wav" {
+        render_wav(&midi_path, &output, soundfont.as_ref(), None)?;
+        eprintln!("Rendered WAV: {}", output.display());
+    }
+
+    Ok(())
 }
 
 /// Render MIDI file to WAV using FluidSynth

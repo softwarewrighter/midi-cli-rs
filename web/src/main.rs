@@ -7,8 +7,8 @@ mod version_info {
     include!(concat!(env!("OUT_DIR"), "/version_info.rs"));
 }
 
-use api::{ApiClient, MelodyRequest, MoodPackInfo, PresetRequest, SavedMelody, SavedPreset};
-use components::{MelodyEditor, MelodyList, PluginManager, PresetEditor, PresetList};
+use api::{AbcImportRequest, ApiClient, MelodyRequest, MoodPackInfo, PresetRequest, SavedMelody, SavedPreset};
+use components::{AbcImport, MelodyEditor, MelodyList, PluginManager, PresetEditor, PresetList};
 use std::collections::HashMap;
 use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
@@ -33,6 +33,9 @@ struct AppState {
     editing_melody: Option<SavedMelody>,
     generating_melody: Option<String>,
     melody_audio_urls: HashMap<String, String>,
+    // ABC Import
+    abc_importing: bool,
+    abc_import_error: Option<String>,
     // Plugins
     plugins: Vec<MoodPackInfo>,
     plugins_loading: bool,
@@ -76,6 +79,11 @@ enum Msg {
     MelodyDeleted(String),
     GenerateMelodyAudio(String),
     MelodyGenerationComplete(String, String),
+    // ABC Import/Export
+    ImportAbcMelody(AbcImportRequest),
+    AbcImported(SavedMelody),
+    AbcImportError(String),
+    ExportMelodyAbc(String),
     // Plugins
     LoadPlugins,
     PluginsLoaded(Vec<MoodPackInfo>),
@@ -291,6 +299,47 @@ impl Component for App {
                 true
             }
 
+            // ABC Import/Export handlers
+            Msg::ImportAbcMelody(req) => {
+                self.state.abc_importing = true;
+                self.state.abc_import_error = None;
+                let link = ctx.link().clone();
+                spawn_local(async move {
+                    match ApiClient::import_abc_melody(&req).await {
+                        Ok(melody) => link.send_message(Msg::AbcImported(melody)),
+                        Err(e) => link.send_message(Msg::AbcImportError(e)),
+                    }
+                });
+                true
+            }
+            Msg::AbcImported(melody) => {
+                self.state.abc_importing = false;
+                self.state.abc_import_error = None;
+                self.state.melodies.insert(0, melody);
+                true
+            }
+            Msg::AbcImportError(error) => {
+                self.state.abc_importing = false;
+                self.state.abc_import_error = Some(error);
+                true
+            }
+            Msg::ExportMelodyAbc(id) => {
+                let link = ctx.link().clone();
+                spawn_local(async move {
+                    match ApiClient::export_melody_abc(&id).await {
+                        Ok(abc) => {
+                            // Copy to clipboard
+                            if let Some(window) = web_sys::window() {
+                                let clipboard = window.navigator().clipboard();
+                                let _ = clipboard.write_text(&abc);
+                            }
+                        }
+                        Err(e) => link.send_message(Msg::Error(e)),
+                    }
+                });
+                true
+            }
+
             // Plugin handlers
             Msg::LoadPlugins => {
                 self.state.plugins_loading = true;
@@ -476,9 +525,18 @@ impl App {
         let on_edit = ctx.link().callback(Msg::EditMelody);
         let on_delete = ctx.link().callback(Msg::DeleteMelody);
         let on_generate = ctx.link().callback(Msg::GenerateMelodyAudio);
+        let on_export_abc = ctx.link().callback(Msg::ExportMelodyAbc);
+        let on_abc_import = ctx.link().callback(Msg::ImportAbcMelody);
+        let on_abc_imported = ctx.link().callback(Msg::AbcImported);
 
         html! {
             <main class="main-content">
+                <AbcImport
+                    on_import={on_abc_import}
+                    on_imported={on_abc_imported}
+                    importing={self.state.abc_importing}
+                    error={self.state.abc_import_error.clone()}
+                />
                 <MelodyEditor
                     on_save={on_save}
                     editing={self.state.editing_melody.clone()}
@@ -489,6 +547,7 @@ impl App {
                     on_edit={on_edit}
                     on_delete={on_delete}
                     on_generate={on_generate}
+                    on_export_abc={on_export_abc}
                     generating={self.state.generating_melody.clone()}
                     audio_urls={self.state.melody_audio_urls.clone()}
                 />

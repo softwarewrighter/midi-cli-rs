@@ -3,6 +3,7 @@
 //! This library provides programmatic MIDI generation with support for
 //! note sequences, instrument selection, and mood presets.
 
+pub mod import;
 pub mod midi;
 #[cfg(feature = "native-plugins")]
 pub mod plugin;
@@ -17,6 +18,9 @@ pub use midi::sequence::{
 pub use midi::writer::{MidiWriteError, write_midi, write_midi_single};
 pub use midi::{Note, NoteSequence};
 pub use preset::{Key, Mood, MoodGenerator, PresetConfig, generate_mood};
+
+// Re-export import types
+pub use import::{AbcParser, ImportError, ImportedMelody, ImportedNote, MusicXmlParser};
 
 // Re-export plugin-related types and functions for CLI use
 #[cfg(feature = "server")]

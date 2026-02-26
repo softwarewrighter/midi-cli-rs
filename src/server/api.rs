@@ -1,9 +1,10 @@
 //! REST API handlers for the web server.
 
+use crate::import::{notes_to_abc, AbcParser};
 use crate::midi::sequence::INSTRUMENT_MAP;
 use crate::server::state::{
-    AppState, ErrorResponse, GenerateResponse, MelodyRequest, PresetRequest, SavedMelody,
-    SavedPreset,
+    AbcImportRequest, AppState, ErrorResponse, GenerateResponse, MelodyNote, MelodyRequest,
+    PresetRequest, SavedMelody, SavedPreset,
 };
 use axum::{
     extract::{Path, State},
@@ -561,6 +562,103 @@ pub async fn generate_melody_audio(
         audio_url: format!("/audio/{}", filename),
         generated_at,
     }))
+}
+
+/// POST /api/melodies/import/abc - Import ABC notation as a melody.
+pub async fn import_abc_melody(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<AbcImportRequest>,
+) -> Result<(StatusCode, Json<SavedMelody>), (StatusCode, Json<ErrorResponse>)> {
+    // Parse ABC content
+    let imported = AbcParser::parse_string(&req.abc_content).map_err(|e| {
+        (
+            StatusCode::BAD_REQUEST,
+            Json(ErrorResponse {
+                error: format!("Failed to parse ABC notation: {}", e),
+            }),
+        )
+    })?;
+
+    // Convert to MelodyNote format
+    let notes: Vec<MelodyNote> = imported
+        .to_melody_notes()
+        .into_iter()
+        .map(|n| MelodyNote {
+            pitch: n.pitch,
+            duration: n.duration,
+            velocity: n.velocity,
+        })
+        .collect();
+
+    if notes.is_empty() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ErrorResponse {
+                error: "ABC notation contains no valid notes".to_string(),
+            }),
+        ));
+    }
+
+    // Use provided values or defaults from ABC
+    let name = req
+        .name
+        .or(imported.title)
+        .unwrap_or_else(|| "Imported Melody".to_string());
+    let key = imported.key.unwrap_or_else(|| "C".to_string());
+    let tempo = req.tempo.or(imported.tempo).unwrap_or(120);
+    let instrument = req.instrument.unwrap_or_else(|| "piano".to_string());
+
+    // Create the melody
+    let id = uuid::Uuid::new_v4().to_string();
+    let melody = SavedMelody {
+        id: id.clone(),
+        name,
+        notes,
+        key,
+        tempo,
+        instrument,
+        attack: 0,
+        decay: 64,
+        created_at: chrono::Utc::now().to_rfc3339(),
+        last_generated: None,
+    };
+
+    // Save
+    let mut melodies = state.melodies.write().await;
+    melodies.insert(id, melody.clone());
+    drop(melodies);
+
+    if let Err(e) = state.save().await {
+        eprintln!("Failed to save melodies: {}", e);
+    }
+
+    Ok((StatusCode::CREATED, Json(melody)))
+}
+
+/// GET /api/melodies/:id/export/abc - Export a melody as ABC notation.
+pub async fn export_melody_abc(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+) -> Result<String, (StatusCode, Json<ErrorResponse>)> {
+    let melodies = state.melodies.read().await;
+    let melody = melodies.get(&id).ok_or_else(|| {
+        (
+            StatusCode::NOT_FOUND,
+            Json(ErrorResponse {
+                error: format!("Melody not found: {}", id),
+            }),
+        )
+    })?;
+
+    // Convert notes to format expected by notes_to_abc
+    let notes: Vec<(String, f64, u8)> = melody
+        .notes
+        .iter()
+        .map(|n| (n.pitch.clone(), n.duration, n.velocity))
+        .collect();
+
+    let abc = notes_to_abc(&notes, &melody.name, &melody.key, melody.tempo);
+    Ok(abc)
 }
 
 /// GET /api/instruments - List available instruments.
