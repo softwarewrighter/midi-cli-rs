@@ -1,4 +1,5 @@
 /target
+**/target/
 
 # Generated audio files (web server output)
 /generated/
