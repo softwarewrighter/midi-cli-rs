@@ -36,6 +36,7 @@ struct AppState {
     // ABC Import
     abc_importing: bool,
     abc_import_error: Option<String>,
+    abc_import_success: Option<String>,
     // Plugins
     plugins: Vec<MoodPackInfo>,
     plugins_loading: bool,
@@ -301,24 +302,36 @@ impl Component for App {
 
             // ABC Import/Export handlers
             Msg::ImportAbcMelody(req) => {
+                web_sys::console::log_1(&format!("Msg::ImportAbcMelody received, content length: {}", req.abc_content.len()).into());
                 self.state.abc_importing = true;
                 self.state.abc_import_error = None;
+                self.state.abc_import_success = None;
                 let link = ctx.link().clone();
                 spawn_local(async move {
+                    web_sys::console::log_1(&"Calling ApiClient::import_abc_melody".into());
                     match ApiClient::import_abc_melody(&req).await {
-                        Ok(melody) => link.send_message(Msg::AbcImported(melody)),
-                        Err(e) => link.send_message(Msg::AbcImportError(e)),
+                        Ok(melody) => {
+                            web_sys::console::log_1(&format!("Import succeeded: {}", melody.name).into());
+                            link.send_message(Msg::AbcImported(melody));
+                        }
+                        Err(e) => {
+                            web_sys::console::log_1(&format!("Import failed: {}", e).into());
+                            link.send_message(Msg::AbcImportError(e));
+                        }
                     }
                 });
                 true
             }
             Msg::AbcImported(melody) => {
+                web_sys::console::log_1(&format!("Msg::AbcImported: {}", melody.name).into());
                 self.state.abc_importing = false;
                 self.state.abc_import_error = None;
+                self.state.abc_import_success = Some(format!("Imported '{}'", melody.name));
                 self.state.melodies.insert(0, melody);
                 true
             }
             Msg::AbcImportError(error) => {
+                web_sys::console::log_1(&format!("Msg::AbcImportError: {}", error).into());
                 self.state.abc_importing = false;
                 self.state.abc_import_error = Some(error);
                 true
@@ -527,15 +540,14 @@ impl App {
         let on_generate = ctx.link().callback(Msg::GenerateMelodyAudio);
         let on_export_abc = ctx.link().callback(Msg::ExportMelodyAbc);
         let on_abc_import = ctx.link().callback(Msg::ImportAbcMelody);
-        let on_abc_imported = ctx.link().callback(Msg::AbcImported);
 
         html! {
             <main class="main-content">
                 <AbcImport
                     on_import={on_abc_import}
-                    on_imported={on_abc_imported}
                     importing={self.state.abc_importing}
                     error={self.state.abc_import_error.clone()}
+                    success={self.state.abc_import_success.clone()}
                 />
                 <MelodyEditor
                     on_save={on_save}

@@ -414,15 +414,28 @@ impl ApiClient {
 
     // ABC Import/Export endpoints
     pub async fn import_abc_melody(req: &AbcImportRequest) -> Result<SavedMelody, String> {
+        web_sys::console::log_1(&format!("API: import_abc_melody called, content length: {}", req.abc_content.len()).into());
+
         let response = Request::post(&format!("{}/melodies/import/abc", API_BASE))
             .json(req)
-            .map_err(|e| e.to_string())?
+            .map_err(|e| {
+                web_sys::console::log_1(&format!("API: json serialization error: {}", e).into());
+                e.to_string()
+            })?
             .send()
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| {
+                web_sys::console::log_1(&format!("API: request send error: {}", e).into());
+                e.to_string()
+            })?;
+
+        web_sys::console::log_1(&format!("API: response status: {}", response.status()).into());
 
         if response.ok() {
-            response.json().await.map_err(|e| e.to_string())
+            response.json().await.map_err(|e| {
+                web_sys::console::log_1(&format!("API: json parse error: {}", e).into());
+                e.to_string()
+            })
         } else {
             Err(Self::extract_error(response, "Failed to import ABC").await)
         }

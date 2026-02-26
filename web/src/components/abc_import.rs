@@ -1,81 +1,104 @@
 //! ABC notation import component.
 
-use crate::api::{AbcImportRequest, SavedMelody};
-use web_sys::HtmlTextAreaElement;
+use crate::api::AbcImportRequest;
+use gloo_file::callbacks::FileReader;
+use gloo_file::File;
+use web_sys::{HtmlInputElement, HtmlSelectElement, HtmlTextAreaElement};
 use yew::prelude::*;
 
 #[derive(Properties, PartialEq)]
 pub struct AbcImportProps {
     pub on_import: Callback<AbcImportRequest>,
-    pub on_imported: Callback<SavedMelody>,
     #[prop_or_default]
     pub importing: bool,
     #[prop_or_default]
     pub error: Option<String>,
+    #[prop_or_default]
+    pub success: Option<String>,
 }
 
 #[function_component(AbcImport)]
 pub fn abc_import(props: &AbcImportProps) -> Html {
-    let abc_content = use_state(String::new);
-    let name = use_state(String::new);
-    let instrument = use_state(|| "piano".to_string());
-    let tempo = use_state(|| "".to_string());
-    let collapsed = use_state(|| true);
+    let collapsed = use_state(|| false);
+    let file_reader = use_state(|| None::<FileReader>);
 
-    let on_abc_input = {
-        let abc_content = abc_content.clone();
-        Callback::from(move |e: InputEvent| {
-            let target: HtmlTextAreaElement = e.target_unchecked_into();
-            abc_content.set(target.value());
-        })
-    };
+    // Use refs to read values directly from DOM (more reliable than controlled inputs in WASM)
+    let textarea_ref = use_node_ref();
+    let name_ref = use_node_ref();
+    let instrument_ref = use_node_ref();
+    let tempo_ref = use_node_ref();
 
-    let on_name_input = {
-        let name = name.clone();
-        Callback::from(move |e: InputEvent| {
-            let input: web_sys::HtmlInputElement = e.target_unchecked_into();
-            name.set(input.value());
-        })
-    };
-
-    let on_instrument_change = {
-        let instrument = instrument.clone();
+    let on_file_upload = {
+        let textarea_ref = textarea_ref.clone();
+        let file_reader = file_reader.clone();
         Callback::from(move |e: Event| {
-            let select: web_sys::HtmlSelectElement = e.target_unchecked_into();
-            instrument.set(select.value());
-        })
-    };
-
-    let on_tempo_input = {
-        let tempo = tempo.clone();
-        Callback::from(move |e: InputEvent| {
-            let input: web_sys::HtmlInputElement = e.target_unchecked_into();
-            tempo.set(input.value());
+            let input: HtmlInputElement = e.target_unchecked_into();
+            if let Some(files) = input.files() {
+                if let Some(file) = files.get(0) {
+                    let file = File::from(file);
+                    let textarea_ref = textarea_ref.clone();
+                    let reader = gloo_file::callbacks::read_as_text(&file, move |result| {
+                        if let Ok(content) = result {
+                            if let Some(textarea) = textarea_ref.cast::<HtmlTextAreaElement>() {
+                                textarea.set_value(&content);
+                            }
+                        }
+                    });
+                    file_reader.set(Some(reader));
+                }
+            }
         })
     };
 
     let on_submit = {
-        let abc_content = abc_content.clone();
-        let name = name.clone();
-        let instrument = instrument.clone();
-        let tempo = tempo.clone();
+        let textarea_ref = textarea_ref.clone();
+        let name_ref = name_ref.clone();
+        let instrument_ref = instrument_ref.clone();
+        let tempo_ref = tempo_ref.clone();
         let on_import = props.on_import.clone();
 
         Callback::from(move |e: SubmitEvent| {
             e.prevent_default();
 
+            // Read values directly from DOM
+            let content = textarea_ref
+                .cast::<HtmlTextAreaElement>()
+                .map(|t| t.value())
+                .unwrap_or_default();
+
+            if content.trim().is_empty() {
+                web_sys::console::log_1(&"ABC Import: content is empty".into());
+                return;
+            }
+
+            let name = name_ref
+                .cast::<HtmlInputElement>()
+                .map(|i| i.value())
+                .filter(|s| !s.is_empty());
+
+            let instrument = instrument_ref
+                .cast::<HtmlSelectElement>()
+                .map(|s| s.value());
+
+            let tempo = tempo_ref
+                .cast::<HtmlInputElement>()
+                .and_then(|i| i.value().parse().ok());
+
+            web_sys::console::log_1(&format!("ABC Import: submitting, content length: {}", content.len()).into());
+
             let req = AbcImportRequest {
-                abc_content: (*abc_content).clone(),
-                name: if name.is_empty() {
-                    None
-                } else {
-                    Some((*name).clone())
-                },
-                instrument: Some((*instrument).clone()),
-                tempo: tempo.parse().ok(),
+                abc_content: content,
+                name,
+                instrument,
+                tempo,
             };
 
             on_import.emit(req);
+
+            // Clear the textarea after submit
+            if let Some(textarea) = textarea_ref.cast::<HtmlTextAreaElement>() {
+                textarea.set_value("");
+            }
         })
     };
 
@@ -94,17 +117,43 @@ pub fn abc_import(props: &AbcImportProps) -> Html {
             </h2>
 
             if !*collapsed {
+                // Success message
+                if let Some(ref msg) = props.success {
+                    <div class="import-success" style="background: #2d5a2d; padding: 10px; margin-bottom: 15px; border-radius: 4px;">
+                        {msg}
+                        {" - Scroll down to 'Saved Melodies'"}
+                    </div>
+                }
+
+                // Error message
+                if let Some(ref err) = props.error {
+                    <div class="import-error" style="background: #5a2d2d; padding: 10px; margin-bottom: 15px; border-radius: 4px;">
+                        {err}
+                    </div>
+                }
+
                 <form onsubmit={on_submit}>
+                    // File upload
                     <div class="form-group">
-                        <label for="abc-content">{"ABC Notation"}</label>
+                        <label for="abc-file">{"Upload .abc file"}</label>
+                        <input
+                            type="file"
+                            id="abc-file"
+                            accept=".abc,.txt"
+                            onchange={on_file_upload}
+                            class="file-input"
+                        />
+                    </div>
+
+                    // Or paste text
+                    <div class="form-group">
+                        <label for="abc-content">{"Or paste ABC notation"}</label>
                         <textarea
+                            ref={textarea_ref}
                             id="abc-content"
-                            placeholder="X:1\nT:My Tune\nM:4/4\nL:1/4\nK:C\nCDEF|GABC|"
-                            value={(*abc_content).clone()}
-                            oninput={on_abc_input}
+                            placeholder={"X:1\nT:My Tune\nM:4/4\nL:1/4\nK:C\nCDEF|GABC|"}
                             rows="8"
                             class="abc-textarea"
-                            required=true
                         />
                     </div>
 
@@ -112,22 +161,20 @@ pub fn abc_import(props: &AbcImportProps) -> Html {
                         <div class="form-group">
                             <label for="melody-name">{"Name (optional)"}</label>
                             <input
+                                ref={name_ref}
                                 type="text"
                                 id="melody-name"
                                 placeholder="Uses T: field if empty"
-                                value={(*name).clone()}
-                                oninput={on_name_input}
                             />
                         </div>
 
                         <div class="form-group">
                             <label for="instrument">{"Instrument"}</label>
                             <select
+                                ref={instrument_ref}
                                 id="instrument"
-                                value={(*instrument).clone()}
-                                onchange={on_instrument_change}
                             >
-                                <option value="piano">{"Piano"}</option>
+                                <option value="piano" selected=true>{"Piano"}</option>
                                 <option value="strings">{"Strings"}</option>
                                 <option value="guitar">{"Guitar"}</option>
                                 <option value="flute">{"Flute"}</option>
@@ -141,32 +188,25 @@ pub fn abc_import(props: &AbcImportProps) -> Html {
                         <div class="form-group">
                             <label for="tempo">{"Tempo (optional)"}</label>
                             <input
+                                ref={tempo_ref}
                                 type="number"
                                 id="tempo"
                                 placeholder="Uses Q: or 120"
-                                value={(*tempo).clone()}
-                                oninput={on_tempo_input}
                                 min="40"
                                 max="240"
                             />
                         </div>
                     </div>
 
-                    { if let Some(ref err) = props.error {
-                        html! { <div class="import-error">{err}</div> }
-                    } else {
-                        html! {}
-                    }}
-
                     <button
                         type="submit"
                         class="btn-primary"
-                        disabled={props.importing || abc_content.is_empty()}
+                        disabled={props.importing}
                     >
                         { if props.importing {
-                            html! { <span class="loading"></span> }
+                            html! { <><span class="loading"></span>{" Importing..."}</> }
                         } else {
-                            html! { "Import" }
+                            html! { "Import ABC" }
                         }}
                     </button>
                 </form>
