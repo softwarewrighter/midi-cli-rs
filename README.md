@@ -235,6 +235,19 @@ For unambiguous commercial licensing of rendered audio:
 2. **FluidR3_GM** (~140MB) - MIT licensed
    - Available via `brew install fluid-synth` or package managers
 
+## Disclaimer
+
+**You are responsible for how you use generated audio.** Ensure you have the appropriate rights and permissions for any commercial or public use.
+
+This tool generates MIDI algorithmically, but users must handle audio rendering and distribution responsibly. Be aware of these copyright risk areas:
+
+1. **Derivative works** - Configuring generation to produce music similar to existing copyrighted compositions
+2. **SoundFont licensing** - Using soundfonts or samples with licensing restrictions (see SoundFonts section above)
+3. **Transcribed melodies** - Importing or adapting existing copyrighted melodies via ABC notation or manual note entry
+4. **Commercial distribution** - Selling or monetizing generated audio without verifying all component licenses
+
+The algorithmic generation process itself does not infringe copyright, but outputs may still raise concerns if configured to resemble existing works.
+
 ## License
 
 MIT License - See [LICENSE](LICENSE) for details.
